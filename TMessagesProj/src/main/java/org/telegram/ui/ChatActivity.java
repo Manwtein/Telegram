@@ -4847,7 +4847,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                                         ChatActivity.this,
                                         tapPositionX,
                                         tapPositionY,
-                                        true
+                                        messageObject.getDialogId() < 0
                                 );
                             }
                         }

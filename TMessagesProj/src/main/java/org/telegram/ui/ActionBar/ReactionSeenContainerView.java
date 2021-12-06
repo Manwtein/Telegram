@@ -19,6 +19,7 @@ import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.R;
 import org.telegram.messenger.ReactionInteractor;
 import org.telegram.tgnet.TLRPC;
+import org.telegram.ui.Cells.DividerCell;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Components.ViewPagerReactions;
@@ -92,6 +93,16 @@ class ReactionSeenContainerView extends ViewPagerReactions {
         });
         addView(backContainer);
         setBackButton(backContainer);
+        addView(new DividerCell(context),
+                LayoutHelper.createFrame(
+                LayoutHelper.MATCH_PARENT,
+                LayoutHelper.WRAP_CONTENT,
+                Gravity.TOP | Gravity.LEFT,
+                0,
+                80,
+                0,
+                0
+        ));
         listAdapter = new ListAdapter(context);
         listView = new RecyclerListView(context);
         listView.setVerticalScrollBarEnabled(false);
