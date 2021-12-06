@@ -13,6 +13,7 @@ import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
@@ -798,7 +799,7 @@ public class DataAutoDownloadActivity extends BaseFragment {
                     break;
                 }
                 case 1: {
-                    view = new ShadowSectionCell(mContext);
+                    view = new ShadowSectionCell(mContext); // TODO 28/11/2021 Fuji team, RIDER-: check this logic
                     break;
                 }
                 case 2: {

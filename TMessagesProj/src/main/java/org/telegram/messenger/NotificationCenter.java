@@ -181,6 +181,10 @@ public class NotificationCenter {
     public static final int filterSettingsUpdated = totalEvents++;
     public static final int suggestedFiltersLoaded = totalEvents++;
 
+    public static final int reactionsLoaded = totalEvents++;
+    public static final int reactionsByFilterLoaded = totalEvents++;
+    public static final int reactionDetailForMessageLoaded = totalEvents++;
+
     //global
     public static final int pushMessagesUpdated = totalEvents++;
     public static final int stopEncodingService = totalEvents++;

@@ -10455,7 +10455,7 @@ public class TLRPC {
             ChatFull result = null;
             switch (constructor) {
                 case 0xd18ee226:
-                    result = new TL_chatFull();
+                    result = new TL_chatFull(); // TODO 29/11/2021 Fuji team, RIDER-: check when happens
                     break;
                 case 0xe13c3d20:
                     result = new TL_channelFull();

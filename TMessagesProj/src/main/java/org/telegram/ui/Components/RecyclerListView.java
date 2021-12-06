@@ -63,6 +63,7 @@ public class RecyclerListView extends RecyclerView {
     private OnItemClickListenerExtended onItemClickListenerExtended;
     private OnItemLongClickListener onItemLongClickListener;
     private OnItemLongClickListenerExtended onItemLongClickListenerExtended;
+    private OnDoubleTapListener onDoubleTapListener;
     private boolean longPressCalled;
     private OnScrollListener onScrollListener;
     private OnInterceptTouchListener onInterceptTouchListener;
@@ -113,6 +114,8 @@ public class RecyclerListView extends RecyclerView {
     private boolean wasPressed;
     private boolean disallowInterceptTouchEvents;
     private boolean instantClick;
+    private boolean isDoubleTapEnabled;
+    private boolean isFinishDoubleTapHandling;
     private Runnable clickRunnable;
     private boolean ignoreOnScroll;
 
@@ -167,6 +170,11 @@ public class RecyclerListView extends RecyclerView {
         boolean onItemClick(View view, int position, float x, float y);
         void onMove(float dx, float dy);
         void onLongClickRelease();
+    }
+
+    public interface OnDoubleTapListener {
+        void onDoubleTap(View view, float tapPositionX, float tapPositionY);
+        boolean isNeedHandle(View view);
     }
 
     public interface OnInterceptTouchListener {
@@ -725,55 +733,14 @@ public class RecyclerListView extends RecyclerView {
             gestureDetector = new GestureDetector(context, new GestureDetector.OnGestureListener() {
                 @Override
                 public boolean onSingleTapUp(MotionEvent e) {
-                    if (currentChildView != null && (onItemClickListener != null || onItemClickListenerExtended != null)) {
-                        final float x = e.getX();
-                        final float y = e.getY();
-                        onChildPressed(currentChildView, x, y, true);
-                        final View view = currentChildView;
-                        final int position = currentChildPosition;
-                        if (instantClick && position != -1) {
-                            view.playSoundEffect(SoundEffectConstants.CLICK);
-                            view.sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_CLICKED);
-                            if (onItemClickListener != null) {
-                                onItemClickListener.onItemClick(view, position);
-                            } else if (onItemClickListenerExtended != null) {
-                                onItemClickListenerExtended.onItemClick(view, position, x - view.getX(), y - view.getY());
-                            }
-                        }
-                        AndroidUtilities.runOnUIThread(clickRunnable = new Runnable() {
-                            @Override
-                            public void run() {
-                                if (this == clickRunnable) {
-                                    clickRunnable = null;
-                                }
-                                if (view != null) {
-                                    onChildPressed(view, 0, 0, false);
-                                    if (!instantClick) {
-                                        view.playSoundEffect(SoundEffectConstants.CLICK);
-                                        view.sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_CLICKED);
-                                        if (position != -1) {
-                                            if (onItemClickListener != null) {
-                                                onItemClickListener.onItemClick(view, position);
-                                            } else if (onItemClickListenerExtended != null) {
-                                                onItemClickListenerExtended.onItemClick(view, position, x - view.getX(), y - view.getY());
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }, ViewConfiguration.getPressedStateDuration());
-
-                        if (selectChildRunnable != null) {
-                            View pressedChild = currentChildView;
-                            AndroidUtilities.cancelRunOnUIThread(selectChildRunnable);
-                            selectChildRunnable = null;
-                            currentChildView = null;
-                            interceptedByChild = false;
-                            removeSelection(pressedChild, e);
-                        }
+                    if (isDoubleTapEnabled && onDoubleTapListener != null && onDoubleTapListener.isNeedHandle(currentChildView)) {
+                        isFinishDoubleTapHandling = false;
+                        return true;
                     }
+                    singleTapProcess(e);
                     return true;
                 }
+
 
                 @Override
                 public void onLongPress(MotionEvent event) {
@@ -816,6 +783,88 @@ public class RecyclerListView extends RecyclerView {
                 }
             });
             gestureDetector.setIsLongpressEnabled(false);
+            gestureDetector.setOnDoubleTapListener(new GestureDetector.OnDoubleTapListener() {
+                @Override
+                public boolean onSingleTapConfirmed(MotionEvent e) {
+                    System.out.println(".onSingleTapConfirmed");
+                    if (isDoubleTapEnabled) {
+                        singleTapProcess(e);
+                        isFinishDoubleTapHandling = true;
+//                        RecyclerListView.this.onTouchEvent(e);
+//                        e.setAction(MotionEvent.ACTION_UP);
+//                        onInterceptTouchEvent(RecyclerListView.this, e);
+                        processInterceptSingleTap(e, MotionEvent.ACTION_UP);
+                    }
+                    return true;
+                }
+
+                @Override
+                public boolean onDoubleTap(MotionEvent e) {
+                    System.out.println(".onDoubleTap");
+                    if (currentChildView != null && onDoubleTapListener != null && onDoubleTapListener.isNeedHandle(currentChildView)) {
+                        onDoubleTapListener.onDoubleTap(currentChildView, e.getX(), getY());
+//                        processInterceptSingleTap(e, MotionEvent.ACTION_UP);
+                        currentChildView = null;
+                        interceptedByChild = false;
+                    }
+                    return false;
+                }
+
+                @Override
+                public boolean onDoubleTapEvent(MotionEvent e) {
+                    System.out.println(".onDoubleTapEvent");
+                    return false;
+                }
+            });
+        }
+        private void singleTapProcess(MotionEvent e) {
+            if (currentChildView != null && (onItemClickListener != null || onItemClickListenerExtended != null)) {
+                final float x = e.getX();
+                final float y = e.getY();
+                onChildPressed(currentChildView, x, y, true);
+                final View view = currentChildView;
+                final int position = currentChildPosition;
+                if (instantClick && position != -1) {
+                    view.playSoundEffect(SoundEffectConstants.CLICK);
+                    view.sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_CLICKED);
+                    if (onItemClickListener != null) {
+                        onItemClickListener.onItemClick(view, position);
+                    } else if (onItemClickListenerExtended != null) {
+                        onItemClickListenerExtended.onItemClick(view, position, x - view.getX(), y - view.getY());
+                    }
+                }
+                AndroidUtilities.runOnUIThread(clickRunnable = new Runnable() {
+                    @Override
+                    public void run() {
+                        if (this == clickRunnable) {
+                            clickRunnable = null;
+                        }
+                        if (view != null) {
+                            onChildPressed(view, 0, 0, false);
+                            if (!instantClick) {
+                                view.playSoundEffect(SoundEffectConstants.CLICK);
+                                view.sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_CLICKED);
+                                if (position != -1) {
+                                    if (onItemClickListener != null) {
+                                        onItemClickListener.onItemClick(view, position);
+                                    } else if (onItemClickListenerExtended != null) {
+                                        onItemClickListenerExtended.onItemClick(view, position, x - view.getX(), y - view.getY());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }, ViewConfiguration.getPressedStateDuration());
+
+                if (selectChildRunnable != null) {
+                    View pressedChild = currentChildView;
+                    AndroidUtilities.cancelRunOnUIThread(selectChildRunnable);
+                    selectChildRunnable = null;
+                    currentChildView = null;
+                    interceptedByChild = false;
+                    removeSelection(pressedChild, e);
+                }
+            }
         }
 
         @Override
@@ -901,25 +950,32 @@ public class RecyclerListView extends RecyclerView {
                 } else {
                     selectorRect.setEmpty();
                 }
-            } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_POINTER_UP || action == MotionEvent.ACTION_CANCEL || !isScrollIdle) {
-                if (currentChildView != null) {
-                    if (selectChildRunnable != null) {
-                        AndroidUtilities.cancelRunOnUIThread(selectChildRunnable);
-                        selectChildRunnable = null;
-                    }
-                    View pressedChild = currentChildView;
-                    onChildPressed(currentChildView, 0, 0, false);
-                    currentChildView = null;
-                    interceptedByChild = false;
-                    removeSelection(pressedChild, event);
-
-                    if ((action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_POINTER_UP || action == MotionEvent.ACTION_CANCEL) && onItemLongClickListenerExtended != null && longPressCalled) {
-                        onItemLongClickListenerExtended.onLongClickRelease();
-                        longPressCalled = false;
-                    }
+            } else {
+                final boolean isNotDoubleTapIntercept = !isDoubleTapEnabled || isFinishDoubleTapHandling;
+                if (isNotDoubleTapIntercept && action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_POINTER_UP || action == MotionEvent.ACTION_CANCEL || !isScrollIdle) {
+                    processInterceptSingleTap(event, action);
                 }
             }
             return false;
+        }
+
+        private void processInterceptSingleTap(MotionEvent event, int action) {
+            if (currentChildView != null) {
+                if (selectChildRunnable != null) {
+                    AndroidUtilities.cancelRunOnUIThread(selectChildRunnable);
+                    selectChildRunnable = null;
+                }
+                View pressedChild = currentChildView;
+                onChildPressed(currentChildView, 0, 0, false);
+                currentChildView = null;
+                interceptedByChild = false;
+                removeSelection(pressedChild, event);
+
+                if ((action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_POINTER_UP || action == MotionEvent.ACTION_CANCEL) && onItemLongClickListenerExtended != null && longPressCalled) {
+                    onItemLongClickListenerExtended.onLongClickRelease();
+                    longPressCalled = false;
+                }
+            }
         }
 
         @Override
@@ -1428,6 +1484,10 @@ public class RecyclerListView extends RecyclerView {
         onItemClickListener = listener;
     }
 
+    public void setOnDoubleTapListener(OnDoubleTapListener listener) {
+        onDoubleTapListener = listener;
+    }
+
     public void setOnItemClickListener(OnItemClickListenerExtended listener) {
         onItemClickListenerExtended = listener;
     }
@@ -1687,6 +1747,10 @@ public class RecyclerListView extends RecyclerView {
 
     public void setInstantClick(boolean value) {
         instantClick = value;
+    }
+
+    public void setDoubleTapEnabled(boolean value) {
+        isDoubleTapEnabled = value;
     }
 
     public void setDisallowInterceptTouchEvents(boolean value) {
@@ -2026,6 +2090,7 @@ public class RecyclerListView extends RecyclerView {
         super.onDetachedFromWindow();
         selectorPosition = NO_POSITION;
         selectorRect.setEmpty();
+        isFinishDoubleTapHandling = true;
     }
 
     public void addOverlayView(View view, FrameLayout.LayoutParams layoutParams) {
@@ -2142,7 +2207,7 @@ public class RecyclerListView extends RecyclerView {
         if (fastScroll != null && fastScroll.pressed) {
             return false;
         }
-        if (multiSelectionGesture && e.getAction() != MotionEvent.ACTION_DOWN &&e.getAction() != MotionEvent.ACTION_UP && e.getAction() != MotionEvent.ACTION_CANCEL) {
+        if (multiSelectionGesture && e.getAction() != MotionEvent.ACTION_DOWN && e.getAction() != MotionEvent.ACTION_UP && e.getAction() != MotionEvent.ACTION_CANCEL) {
             if (lastX == Float.MAX_VALUE && lastY == Float.MAX_VALUE) {
                 lastX = e.getX();
                 lastY = e.getY();

@@ -19,6 +19,7 @@ import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.ColorFilter;
 import android.graphics.Paint;
 import android.graphics.PixelFormat;
@@ -552,6 +553,12 @@ public class Emoji {
                 canvas.translate(0, emojiDrawingYOffset);
             }
             super.draw(canvas, text, start, end, x, top, y, bottom, paint);
+//            if (text.toString().contains("\uD83D\uDCA9")) {
+//                Paint debugPaint = new Paint();
+//                debugPaint.setColor(Color.CYAN);
+//                debugPaint.setAlpha(100);
+//                canvas.drawRect(start, top, end + size, bottom, debugPaint);
+//            }
             if (needRestore) {
                 canvas.restore();
             }

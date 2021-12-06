@@ -154,6 +154,7 @@ chat_messageLinkIn=-16677912
 chats_menuBackground=-1
 windowBackgroundCheckText=-1
 chat_serviceBackground=1431599255
+chat_reactionUnderContentSelected=-1431599255
 chats_secretIcon=-15093466
 chat_inFileBackground=-1313796
 chat_inBubbleSelected=-1706753

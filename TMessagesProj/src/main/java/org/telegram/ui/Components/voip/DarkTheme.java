@@ -170,6 +170,8 @@ public class DarkTheme{
 				return 0xFF939393;
 			case "chat_outPreviewInstantText":
 				return 0xFFD1EBFF;
+			case "chat_reactionInContentSelected":
+				return 0x6628323D;
 			case "chat_emojiPanelTrendingTitle":
 				return 0xFFF4F4F4;
 			case "chat_inPreviewInstantSelectedText":

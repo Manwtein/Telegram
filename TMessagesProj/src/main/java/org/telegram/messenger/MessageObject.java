@@ -113,13 +113,19 @@ public class MessageObject {
     public boolean viewsReloaded;
     public boolean pollVisibleOnScreen;
     public long pollLastCheckTime;
+    public boolean isVisibleOnScreen;
+    public long reactionsLastCheckTime;
     public int wantedBotKeyboardWidth;
+    public int reactionKeyboardWidth;
     public boolean attachPathExists;
     public boolean mediaExists;
     public boolean resendAsIs;
     public String customReplyName;
     public boolean useCustomPhoto;
     public StringBuilder botButtonsLayout;
+    public StringBuilder reactionButtonsLayout;
+    public ArrayList<Float> reactionButtonsWidth;
+    public TLRPC.TL_availableReaction localAvailableReaction;
     public boolean isRestrictedMessage;
     public long loadedFileSize;
 
@@ -929,6 +935,7 @@ public class MessageObject {
         updateMessageText(users, chats, sUsers, sChats);
         setType();
         measureInlineBotButtons();
+        measureReactionButtons();
 
         Calendar rightNow = new GregorianCalendar();
         rightNow.setTimeInMillis((long) (messageOwner.date) * 1000);
@@ -1904,6 +1911,7 @@ public class MessageObject {
 
         setType();
         measureInlineBotButtons();
+        measureReactionButtons();
         generateCaption();
 
         TextPaint paint;
@@ -2129,8 +2137,50 @@ public class MessageObject {
         message.flags |= 1048576;
     }
 
-    public boolean hasReactions() {
+    public boolean hasReactions() { // TODO 03/12/2021 Fuji team, RIDER-:
         return messageOwner.reactions != null && !messageOwner.reactions.results.isEmpty();
+    }
+
+    public boolean hasChosenReaction() { // TODO 03/12/2021 Fuji team, RIDER-:
+        boolean hasChosenReaction = false;
+        if (hasReactions()) {
+            for (TLRPC.TL_reactionCount count: messageOwner.reactions.results) {
+                if (count.chosen) {
+                    hasChosenReaction = true;
+                }
+            }
+        }
+        if (localAvailableReaction != null) {
+            hasChosenReaction = true;
+        }
+        return hasChosenReaction;
+    }
+
+    public boolean hasServerChosenReaction() { // TODO 03/12/2021 Fuji team, RIDER-:
+        boolean hasChosenReaction = false;
+        if (hasReactions()) {
+            for (TLRPC.TL_reactionCount count: messageOwner.reactions.results) {
+                if (count.chosen) {
+                    hasChosenReaction = true;
+                }
+            }
+        }
+        return hasChosenReaction;
+    }
+
+    public String getChosenReaction() { // TODO 03/12/2021 Fuji team, RIDER-:
+        String chosenReaction = null;
+        if (hasReactions()) {
+            for (TLRPC.TL_reactionCount count: messageOwner.reactions.results) {
+                if (count.chosen) {
+                    chosenReaction = count.reaction;
+                }
+            }
+        }
+        if (localAvailableReaction != null) {
+            chosenReaction = localAvailableReaction.reaction;
+        }
+        return chosenReaction;
     }
 
     public static void updatePollResults(TLRPC.TL_messageMediaPoll media, TLRPC.PollResults results) {
@@ -2410,7 +2460,7 @@ public class MessageObject {
             return;
         }
         wantedBotKeyboardWidth = 0;
-        if (messageOwner.reply_markup instanceof TLRPC.TL_replyInlineMarkup || messageOwner.reactions != null && !messageOwner.reactions.results.isEmpty()) {
+        if (messageOwner.reply_markup instanceof TLRPC.TL_replyInlineMarkup /*|| messageOwner.reactions != null && !messageOwner.reactions.results.isEmpty()*/) {
             Theme.createCommonMessageResources();
             if (botButtonsLayout == null) {
                 botButtonsLayout = new StringBuilder();
@@ -2445,7 +2495,7 @@ public class MessageObject {
                 }
                 wantedBotKeyboardWidth = Math.max(wantedBotKeyboardWidth, (maxButtonSize + AndroidUtilities.dp(12)) * size + AndroidUtilities.dp(5) * (size - 1));
             }
-        } else if (messageOwner.reactions != null) {
+        } else if (messageOwner.reactions != null && false) { // TODO 04/12/2021 Fuji team, RIDER-:
             int size = messageOwner.reactions.results.size();
             for (int a = 0; a < size; a++) {
                 TLRPC.TL_reactionCount reactionCount = messageOwner.reactions.results.get(a);
@@ -2464,6 +2514,75 @@ public class MessageObject {
                 wantedBotKeyboardWidth = Math.max(wantedBotKeyboardWidth, (maxButtonSize + AndroidUtilities.dp(12)) * size + AndroidUtilities.dp(5) * (size - 1));
             }
         }
+    }
+
+    public boolean measureReactionButtons() {
+//        if (isRestrictedMessage) { // TODO 04/12/2021 Fuji team, RIDER-: what is it?
+//            return;
+//        }
+        int tempAvailableWidth = reactionKeyboardWidth;
+        reactionButtonsWidth = new ArrayList<>();
+        reactionKeyboardWidth = 0;
+        int lastRowIndex = 0;
+
+        if (messageOwner.reactions != null && !messageOwner.reactions.results.isEmpty() && getDialogId() < 0) {
+            Theme.createCommonMessageResources();
+            if (reactionButtonsLayout == null) {
+                reactionButtonsLayout = new StringBuilder();
+            } else {
+                reactionButtonsLayout.setLength(0);
+            }
+            int minWidth = AndroidUtilities.dp(20);
+            int maxWidth = getMaxMessageTextWidth();
+            int size = messageOwner.reactions.results.size();
+            int currentWidth = 0;
+            int rowCount = 1;
+            for (int a = 0; a < size; a++) {
+                TLRPC.TL_reactionCount reactionCount = messageOwner.reactions.results.get(a);
+                reactionButtonsLayout.append(0).append(a);
+//                String formattedText = String.format("%s", LocaleController.formatShortNumber(Math.max(1, reactionCount.count), null));
+//                CharSequence text = Emoji.replaceEmoji(String.format("%s", reactionCount.reaction) + formattedText, Theme.chat_msgBotButtonPaint.getFontMetricsInt(), AndroidUtilities.dp(15), false);
+//                StaticLayout staticLayout = new StaticLayout(text, Theme.chat_msgBotButtonPaint, AndroidUtilities.dp(2000), Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
+//                if (staticLayout.getLineCount() > 0) {
+//                    float width = staticLayout.getLineWidth(0);
+//                    float left = staticLayout.getLineLeft(0);
+//                    if (left < width) {
+//                        width -= left;
+//                    }
+//                    reactionButtonsWidth.add(Math.min(AndroidUtilities.dp(46), width + AndroidUtilities.dp(16) + AndroidUtilities.dp(16)));
+//                    maxButtonSize = Math.max(maxButtonSize, (int) Math.ceil(width) + AndroidUtilities.dp(4));
+//                }
+//                wantedReactionKeyboardWidth = Math.max(wantedReactionKeyboardWidth, (maxButtonSize + AndroidUtilities.dp(12)) * size + AndroidUtilities.dp(5) * (size - 1));
+                String formattedText = String.format("%s", LocaleController.formatShortNumber(Math.max(1, reactionCount.count), null));
+                final String finalText = String.format("%s %s", reactionCount.reaction, formattedText);
+                final TextPaint textPaint = Theme.chat_reactionButtonTextPaint;
+                if (textPaint == null) {
+                    break;
+                }
+                CharSequence buttonText = Emoji.replaceEmoji(finalText, textPaint.getFontMetricsInt(), AndroidUtilities.dp(15), false);
+                StaticLayout title = new StaticLayout(buttonText, textPaint, (int) Math.ceil(textPaint.measureText(finalText)), Layout.Alignment.ALIGN_CENTER, 1.0f, 0.0f, false);
+                float width = title.getLineWidth(0);
+                float left = title.getLineLeft(0);
+                if (left < width) {
+                    width -= left;
+                }
+                int buttonWidth = (int) Math.max(width + AndroidUtilities.dp(16), AndroidUtilities.dp(46)); // TODO 04/12/2021 Fuji team, RIDER-:
+                final int buttonWidthWithMargin = buttonWidth + AndroidUtilities.dp(5);
+                currentWidth += buttonWidthWithMargin;
+                if (currentWidth > maxWidth) {
+                    rowCount++;
+                    reactionKeyboardWidth += currentWidth;
+                    currentWidth = 0;
+                    lastRowIndex = rowCount;
+                }
+                if (a == size - 1 && lastRowIndex == 0) {
+                    reactionKeyboardWidth += currentWidth;
+                    lastRowIndex = rowCount;
+                }
+            }
+            reactionKeyboardWidth += AndroidUtilities.dp(5);
+        }
+        return tempAvailableWidth == reactionKeyboardWidth;
     }
 
     public boolean isVideoAvatar() {
@@ -4528,11 +4647,16 @@ public class MessageObject {
                     block.directionFlags |= 2;
                 }
 
-                textWidth = Math.max(textWidth, Math.min(maxWidth, linesMaxWidth));
+                if (reactionKeyboardWidth > maxWidth) {
+                    textWidth = maxWidth;
+                } else {
+                    textWidth = Math.max(Math.max(textWidth, Math.min(maxWidth, linesMaxWidth)), reactionKeyboardWidth);
+                }
             }
 
             linesOffset += currentBlockLinesCount;
         }
+        lastLineWidth = Math.max(lastLineWidth, Math.min(reactionKeyboardWidth, maxWidth));
     }
 
     public boolean isOut() {

@@ -4210,7 +4210,7 @@ public class MessagesStorage extends BaseController {
         });
     }
 
-    public void updateMessageReactions(long dialogId, int msgId, TLRPC.TL_messageReactions reactions) {
+    public void updateMessageReactions(long dialogId, int msgId, TLRPC.TL_messageReactions reactions) { // TODO 28/11/2021 Fuji team, RIDER-: check this logic
         storageQueue.postRunnable(() -> {
             try {
                 database.beginTransaction();

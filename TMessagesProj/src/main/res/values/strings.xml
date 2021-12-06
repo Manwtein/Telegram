@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="AppName">Telegram</string>
-    <string name="AppNameBeta">Telegram Beta</string>
+    <string name="AppName">Manwteingram</string>
+    <string name="AppNameBeta">Manwteingram Beta</string>
     <string name="LanguageName">English</string>
     <string name="English">English</string>
     <string name="LanguageNameInEnglish">English</string>
@@ -430,6 +430,8 @@
     <string name="ChannelOtherSubscriberJoined">joined %1$s</string>
     <string name="ChannelRestrictedUsers">Restricted users</string>
     <string name="ChannelAdministrators">Administrators</string>
+    <string name="ChannelReactions">Reactions</string>
+    <string name="ChannelReactionsOff">Off</string>
     <string name="ChannelDelete">Delete Channel</string>
     <string name="ChannelDeleteMenu">Delete channel</string>
     <string name="ChannelDeleteAlert">Wait! Deleting this channel will remove all members and all messages will be lost. Delete the channel anyway?</string>
@@ -588,6 +590,10 @@
     <string name="ChannelTypeHeader">Channel type</string>
     <string name="GroupSettingsTitle">Group Settings</string>
     <string name="ChannelSettingsTitle">Channel Settings</string>
+    <string name="ChannelReactionSettingsTitle">Reactions</string>
+    <string name="ChannelReactionEnable">Enable Reactions</string>
+    <string name="ChannelReactionEnableDescription">Allow subscribers to react to channel posts.</string>
+    <string name="ChannelReactionAvailableTitle">Available Reactions</string>
     <string name="TypePrivate">Private</string>
     <string name="TypePublic">Public</string>
     <string name="TypePrivateGroup">Private</string>
@@ -4512,6 +4518,15 @@
     <string name="MessageSeen_few">%1$d Seen</string>
     <string name="MessageSeen_many">%1$d Seen</string>
     <string name="MessageSeen_other">%1$d Seen</string>
+
+    <string name="Reacted_zero">%1$d Reacted</string>
+    <string name="Reacted_one">Reacted</string>
+    <string name="Reacted_two">%1$d Reacted</string>
+    <string name="Reacted_few">%1$d Reacted</string>
+    <string name="Reacted_many">%1$d Reacted</string>
+    <string name="Reacted_other">%1$d Reacted</string>
+
+    <string name="SeenReacted">%1$d/%1$d Reacted</string>
 
     <string name="MessagePlayed_zero">%1$d Played</string>
     <string name="MessagePlayed_one">Played</string>

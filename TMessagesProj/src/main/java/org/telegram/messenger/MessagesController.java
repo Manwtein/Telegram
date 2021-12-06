@@ -21,11 +21,11 @@ import android.os.SystemClock;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import android.util.Base64;
-import android.util.Log;
 import android.util.SparseArray;
 import android.util.SparseBooleanArray;
 import android.util.SparseIntArray;
 
+import androidx.annotation.Nullable;
 import androidx.collection.LongSparseArray;
 import androidx.core.app.NotificationManagerCompat;
 
@@ -323,6 +323,8 @@ public class MessagesController extends BaseController implements NotificationCe
     private SharedPreferences notificationsPreferences;
     private SharedPreferences mainPreferences;
     private SharedPreferences emojiPreferences;
+
+    private ReactionInteractor reactionInteractor;
 
     public volatile boolean ignoreSetOnline;
 
@@ -897,6 +899,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 FileLog.e(e);
             }
         }
+        reactionInteractor = new ReactionInteractor( this);
     }
 
     private void sendLoadPeersRequest(TLObject req, ArrayList<TLObject> requests, TLRPC.messages_Dialogs pinnedDialogs, TLRPC.messages_Dialogs pinnedRemoteDialogs, ArrayList<TLRPC.User> users, ArrayList<TLRPC.Chat> chats, ArrayList<DialogFilter> filtersToSave, SparseArray<DialogFilter> filtersToDelete, ArrayList<Integer> filtersOrder, HashMap<Integer, HashSet<Long>> filterDialogRemovals, HashMap<Integer, HashSet<Long>> filterUserRemovals, HashSet<Integer> filtersUnreadCounterReset) {
@@ -2568,7 +2571,8 @@ public class MessagesController extends BaseController implements NotificationCe
         joiningToChannels.clear();
         migratedChats.clear();
         channelViewsToSend.clear();
-        pollsToCheck.clear();
+        pollsToCheck.clear(); // TODO 28/11/2021 Fuji team, RIDER-: check
+        reactionInteractor.clear();
         pollsToCheckSize = 0;
         dialogsServerOnly.clear();
         dialogsForward.clear();
@@ -2780,7 +2784,7 @@ public class MessagesController extends BaseController implements NotificationCe
             } else {
                 arrayList.remove(dialogId);
 
-                SparseArray<MessageObject> array = pollsToCheck.get(dialogId);
+                SparseArray<MessageObject> array = pollsToCheck.get(dialogId); // TODO 28/11/2021 Fuji team, RIDER-: check
                 if (array != null) {
                     for (int a = 0, N = array.size(); a < N; a++) {
                         MessageObject object = array.valueAt(a);
@@ -5390,13 +5394,13 @@ public class MessagesController extends BaseController implements NotificationCe
                                     minExpireTime = Math.min(minExpireTime, mediaPoll.poll.close_date - currentServerTime);
                                 }
                             }
-                            if (Math.abs(time - messageObject.pollLastCheckTime) < timeout) {
+                            if (Math.abs(time - messageObject.pollLastCheckTime) < timeout) { // Если прошло времени меньше чем таймаут(т.е. возможно еще загружается)
                                 if (!messageObject.pollVisibleOnScreen && !expired) {
                                     array.remove(messageObject.getId());
                                     N2--;
                                     b--;
                                 }
-                            } else {
+                            } else { // Если прошло времени с последний загрузки чем таймаут (значит не грузится сейчас)
                                 messageObject.pollLastCheckTime = time;
                                 TLRPC.TL_messages_getPollResults req = new TLRPC.TL_messages_getPollResults();
                                 req.peer = getInputPeer(messageObject.getDialogId());
@@ -5433,6 +5437,8 @@ public class MessagesController extends BaseController implements NotificationCe
                 });
             }
         }
+        reactionInteractor.loadMessagesReactions(); // TODO 03/12/2021 Fuji team, RIDER-: disable loading when we exit chat
+        reactionInteractor.loadAvailableReactions();
         if (!onlinePrivacy.isEmpty()) {
             ArrayList<Long> toRemove = null;
             for (ConcurrentHashMap.Entry<Long, Integer> entry : onlinePrivacy.entrySet()) {
@@ -8467,7 +8473,7 @@ public class MessagesController extends BaseController implements NotificationCe
         });
     }
 
-    public void addToPollsQueue(long dialogId, ArrayList<MessageObject> visibleObjects) {
+    public void addToPollsQueue(long dialogId, ArrayList<MessageObject> visibleObjects) { // TODO 28/11/2021 Fuji team, RIDER-: check many did
         SparseArray<MessageObject> array = pollsToCheck.get(dialogId);
         if (array == null) {
             array = new SparseArray<>();
@@ -8491,7 +8497,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 if (mediaPoll.poll.close_date <= time) {
                     hasExpiredPolls = true;
                 } else {
-                    minExpireTime = Math.min(minExpireTime, mediaPoll.poll.close_date - time);
+                    minExpireTime = Math.min(minExpireTime, mediaPoll.poll.close_date - time); // minExpireTime = сколько осталось до даты закрытия опроса в секундах
                 }
             }
             int id = messageObject.getId();
@@ -8504,8 +8510,9 @@ public class MessagesController extends BaseController implements NotificationCe
         }
         if (hasExpiredPolls) {
             lastViewsCheckTime = 0;
-        } else if (minExpireTime < 5) {
-            lastViewsCheckTime = Math.min(lastViewsCheckTime, System.currentTimeMillis() - (5 - minExpireTime) * 1000);
+        } else if (minExpireTime < 5) { // Если до даты закрытия меньше 5 секунд
+            final int minExpireTimeInMillis = (5 - minExpireTime) * 1000; // Сколько секунд прошло от проверки
+            lastViewsCheckTime = Math.min(lastViewsCheckTime, System.currentTimeMillis() - minExpireTimeInMillis);
         }
     }
 
@@ -12535,6 +12542,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 updatesOnMainThread.add(baseUpdate);
             } else if (baseUpdate instanceof TLRPC.TL_updateEditChannelMessage || baseUpdate instanceof TLRPC.TL_updateEditMessage) {
                 TLRPC.Message message;
+                // TODO 28/11/2021 Fuji team, RIDER-: update reactions
                 if (baseUpdate instanceof TLRPC.TL_updateEditChannelMessage) {
                     message = ((TLRPC.TL_updateEditChannelMessage) baseUpdate).message;
                     TLRPC.Chat chat = chatsDict.get(message.peer_id.channel_id);
@@ -12552,6 +12560,9 @@ public class MessagesController extends BaseController implements NotificationCe
                         message.media_unread = false;
                         message.out = true;
                     }
+                }
+                if (message.reactions != null) {
+                    reactionInteractor.handleMessageReactionsUpdate(message.reactions, message);
                 }
                 if (!message.out && message.from_id instanceof TLRPC.TL_peerUser && message.from_id.user_id == clientUserId) {
                     message.out = true;
@@ -12698,13 +12709,11 @@ public class MessagesController extends BaseController implements NotificationCe
                 }
                 updatesOnMainThread.add(baseUpdate);
             } else if (baseUpdate instanceof TLRPC.TL_updateMessageReactions) {
-                TLRPC.TL_updateMessageReactions update = (TLRPC.TL_updateMessageReactions) baseUpdate;
-                long dialogId = MessageObject.getPeerId(update.peer);
-                getMessagesStorage().updateMessageReactions(dialogId, update.msg_id, update.reactions);
-                if (updatesOnMainThread == null) {
-                    updatesOnMainThread = new ArrayList<>();
-                }
-                updatesOnMainThread.add(baseUpdate);
+//                if (updatesOnMainThread == null) {
+//                    updatesOnMainThread = new ArrayList<>();
+//                }
+                reactionInteractor.handleMessageReactionsUpdate((TLRPC.TL_updateMessageReactions) baseUpdate);
+//                updatesOnMainThread.add(baseUpdate);
             } else if (baseUpdate instanceof TLRPC.TL_updatePeerLocated) {
                 if (updatesOnMainThread == null) {
                     updatesOnMainThread = new ArrayList<>();
@@ -13340,16 +13349,16 @@ public class MessagesController extends BaseController implements NotificationCe
                     } else if (baseUpdate instanceof TLRPC.TL_updatePeerLocated) {
                         getNotificationCenter().postNotificationName(NotificationCenter.newPeopleNearbyAvailable, baseUpdate);
                     } else if (baseUpdate instanceof TLRPC.TL_updateMessageReactions) {
-                        TLRPC.TL_updateMessageReactions update = (TLRPC.TL_updateMessageReactions) baseUpdate;
-                        long dialogId;
-                        if (update.peer.chat_id != 0) {
-                            dialogId = -update.peer.chat_id;
-                        } else if (update.peer.channel_id != 0) {
-                            dialogId = -update.peer.channel_id;
-                        } else {
-                            dialogId = update.peer.user_id;
-                        }
-                        getNotificationCenter().postNotificationName(NotificationCenter.didUpdateReactions, dialogId, update.msg_id, update.reactions);
+//                        TLRPC.TL_updateMessageReactions update = (TLRPC.TL_updateMessageReactions) baseUpdate;
+//                        long dialogId;
+//                        if (update.peer.chat_id != 0) {
+//                            dialogId = -update.peer.chat_id;
+//                        } else if (update.peer.channel_id != 0) {
+//                            dialogId = -update.peer.channel_id;
+//                        } else {
+//                            dialogId = update.peer.user_id;
+//                        }
+//                        getNotificationCenter().postNotificationName(NotificationCenter.didUpdateReactions, dialogId, update.msg_id, update.reactions);
                     } else if (baseUpdate instanceof TLRPC.TL_updateTheme) {
                         TLRPC.TL_updateTheme update = (TLRPC.TL_updateTheme) baseUpdate;
                         TLRPC.TL_theme theme = (TLRPC.TL_theme) update.theme;
@@ -14603,6 +14612,80 @@ public class MessagesController extends BaseController implements NotificationCe
         } else {
             loadMessagesInternal(dialogId, 0, true, count, finalMessageId, 0, true, 0, classGuid, 2, 0, 0, 0, 0, 0, 0, 0, false, 0, true, false);
         }
+    }
+
+    public void addToMessagePollingQueue(long dialogId, ArrayList<MessageObject> visibleObjects) {
+        reactionInteractor.addToMessagePollingQueue(dialogId, visibleObjects);
+    }
+
+    public TLRPC.Document getSticker(String reaction) {
+        return reactionInteractor.getSticker(reaction);
+    }
+
+    public String getReactionTitle(String reaction) {
+        return reactionInteractor.getReactionTitle(reaction);
+    }
+
+    public ArrayList<TLRPC.TL_availableReaction> getAvailableReactions(TLRPC.ChatFull chatFull) {
+        return reactionInteractor.getCachedAvailableReactions(chatFull);
+    }
+
+    public ArrayList<TLRPC.TL_availableReaction> getAvailableReactions(MessageObject messageObject) {
+        return reactionInteractor.getCachedAvailableReactions(messageObject);
+    }
+
+    public HashMap<String, TLRPC.TL_availableReaction> getAvailableReactionsForSettings() {
+        return reactionInteractor.getAvailableReactionsForSettings();
+    }
+
+    public ArrayList<TLRPC.TL_messageUserReaction> getMessageUserReactions(String reaction) {
+        return reactionInteractor.getMessageUserReactions(reaction);
+    }
+
+    public int getStartIndexForUpdate(String reaction) {
+        return reactionInteractor.getStartIndexForUpdate(reaction);
+    }
+
+    public String getNextOffset(String reaction) {
+        return reactionInteractor.getNextOffset(reaction);
+    }
+
+//    public HashMap<TLRPC.TL_availableReaction, Boolean> getAvailableReactionsForSettings(ArrayList<String> settingsReactions) {
+//        return reactionInteractor.getAvailableReactionsForSettings(settingsReactions);
+//    }
+
+    public int getGeneralReactionsCount(String reaction) {
+        return reactionInteractor.getGeneralReactionsCount(reaction);
+    }
+
+        public void setChatAvailableReactions(TLRPC.InputPeer inputPeer, ArrayList<String> availableReactions) {
+        reactionInteractor.setChatAvailableReactions(inputPeer, availableReactions);
+    }
+
+
+    public void sendReaction(MessageObject messageObject, String reaction) {
+        reactionInteractor.sendReaction(messageObject, reaction);
+    }
+
+    public void deleteReaction(MessageObject messageObject) {
+        reactionInteractor.deleteReaction(messageObject);
+    }
+
+    public String getAvailableFastReaction(MessageObject messageObject) {
+        return reactionInteractor.getAvailableFastReaction(messageObject);
+    }
+
+    public void loadMessageReactionsDetail(TLRPC.InputPeer inputPeer, int messageId, @Nullable String reaction) {
+        reactionInteractor.loadMessageReactionsDetail(inputPeer, messageId, reaction, null);
+    }
+
+    public void loadMessageReactionsDetail(
+            TLRPC.InputPeer inputPeer,
+            int messageId,
+            @Nullable String reaction,
+            String offset
+    ) {
+        reactionInteractor.loadMessageReactionsDetail(inputPeer, messageId, reaction, offset);
     }
 
     public int getChatPendingRequestsOnClosed(long chatId) {

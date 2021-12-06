@@ -23,6 +23,9 @@ import android.graphics.drawable.Drawable;
 import android.os.Build;
 
 import androidx.annotation.Keep;
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.LinearLayoutManager;
+
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -36,10 +39,15 @@ import android.widget.ScrollView;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.FileLog;
+import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
 import org.telegram.messenger.UserConfig;
+import org.telegram.ui.ChatEditReactionsActivity;
 import org.telegram.ui.Components.LayoutHelper;
+import org.telegram.ui.Components.RecyclerListView;
+import org.telegram.ui.Components.ViewPagerFixed;
+import org.telegram.ui.FilteredSearchView;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -179,6 +187,7 @@ public class ActionBarPopupWindow extends PopupWindow {
                 }
             };
             linearLayout.setOrientation(LinearLayout.VERTICAL);
+            linearLayout.setClipChildren(false);
             if (scrollView != null) {
                 scrollView.addView(linearLayout, new ScrollView.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             } else {

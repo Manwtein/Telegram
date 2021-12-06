@@ -13,7 +13,6 @@ import android.content.SharedPreferences;
 import android.os.Build;
 
 public class BuildVars {
-
     public static boolean DEBUG_VERSION = false;
     public static boolean LOGS_ENABLED = false;
     public static boolean DEBUG_PRIVATE_VERSION = false;
@@ -37,7 +36,7 @@ public class BuildVars {
     private static Boolean standaloneApp;
     public static boolean isStandaloneApp() {
         if (standaloneApp == null) {
-            standaloneApp = ApplicationLoader.applicationContext != null && "org.telegram.messenger.web".equals(ApplicationLoader.applicationContext.getPackageName());
+            standaloneApp = ApplicationLoader.applicationContext != null && "com.manwtein.telega.web".equals(ApplicationLoader.applicationContext.getPackageName());
         }
         return standaloneApp;
     }
@@ -45,7 +44,7 @@ public class BuildVars {
     private static Boolean betaApp;
     public static boolean isBetaApp() {
         if (betaApp == null) {
-            betaApp = ApplicationLoader.applicationContext != null && "org.telegram.messenger.beta".equals(ApplicationLoader.applicationContext.getPackageName());
+            betaApp = ApplicationLoader.applicationContext != null && "com.manwtein.telega.beta".equals(ApplicationLoader.applicationContext.getPackageName());
         }
         return betaApp;
     }

@@ -73,6 +73,7 @@ import org.telegram.ui.Components.SizeNotifierFrameLayout;
 import org.telegram.ui.Components.UndoView;
 
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 
 public class ChatEditActivity extends BaseFragment implements ImageUpdater.ImageUpdaterDelegate, NotificationCenter.NotificationCenterDelegate {
@@ -114,6 +115,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
     private TextCell memberRequestsCell;
     private TextCell inviteLinksCell;
     private TextCell adminCell;
+    private TextCell reactionCell;
     private TextCell blockCell;
     private TextCell logCell;
     private TextCell setAvatarCell;
@@ -820,6 +822,18 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
             fragment.setInfo(info);
             presentFragment(fragment);
         });
+        reactionCell = new TextCell(context);
+        reactionCell.setBackgroundDrawable(Theme.getSelectorDrawable(false));
+        reactionCell.setOnClickListener(v -> {
+//            Bundle args = new Bundle();
+//            args.putLong("chat_id", chatId);
+//            args.putInt("type", ChatUsersActivity.TYPE_ADMIN);
+//            ChatEditReactionsActivity fragment = new ChatEditReactionsActivity(/*chatId, *//*locationCell != null && locationCell.getVisibility() == View.VISIBLE*/);
+            ChatEditReactionsActivity fragment = new ChatEditReactionsActivity();
+            fragment.setInfo(info);
+//            fragment.setInfo(info);
+            presentFragment(fragment);
+        });
 
         membersCell = new TextCell(context);
         membersCell.setBackgroundDrawable(Theme.getSelectorDrawable(false));
@@ -853,6 +867,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
         }
         if (!isChannel) {
             infoContainer.addView(inviteLinksCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+            infoContainer.addView(reactionCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
         }
         infoContainer.addView(adminCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
         infoContainer.addView(membersCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
@@ -861,6 +876,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
         }
         if (isChannel) {
             infoContainer.addView(inviteLinksCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+            infoContainer.addView(reactionCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
         }
         if (isChannel || currentChat.gigagroup) {
             infoContainer.addView(blockCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
@@ -1426,6 +1442,18 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
                     }
                 }
                 adminCell.setTextAndValueAndIcon(LocaleController.getString("ChannelAdministrators", R.string.ChannelAdministrators), String.format("%d", ChatObject.isChannel(currentChat) ? info.admins_count : getAdminCount()), R.drawable.actions_addadmin, true);
+                final String channelReactionsDescription;
+                if (info.available_reactions.isEmpty()) {
+                    channelReactionsDescription = LocaleController.getString("ChannelReactionsOff", R.string.ChannelReactionsOff);
+                } else {
+                    channelReactionsDescription = String.format(Locale.ENGLISH, "%d/%d", info.available_reactions.size(), 11); // TODO 28/11/2021 Fuji team, RIDER-: check local
+                }
+                reactionCell.setTextAndValueAndIcon(
+                        LocaleController.getString("ChannelReactions", R.string.ChannelReactions),
+                        channelReactionsDescription,
+                        R.drawable.actions_reactions,
+                        true
+                );
             } else {
                 if (isChannel) {
                     membersCell.setTextAndIcon(LocaleController.getString("ChannelSubscribers", R.string.ChannelSubscribers), R.drawable.actions_viewmembers, true);
@@ -1438,6 +1466,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
                         blockCell.setTextAndIcon(LocaleController.getString("ChannelPermissions", R.string.ChannelPermissions), R.drawable.actions_permissions, true);
                     }
                 }
+                // TODO 28/11/2021 Fuji team, RIDER-: check this state
                 adminCell.setTextAndIcon(LocaleController.getString("ChannelAdministrators", R.string.ChannelAdministrators), R.drawable.actions_addadmin, true);
             }
             if (info == null || !ChatObject.canUserDoAdminAction(currentChat, ChatObject.ACTION_INVITE) || (!isPrivate && currentChat.creator)) {

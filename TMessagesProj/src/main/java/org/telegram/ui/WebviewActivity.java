@@ -247,7 +247,8 @@ public class WebviewActivity extends BaseFragment {
                             Intent intent = new Intent(Intent.ACTION_VIEW, uri);
                             ComponentName componentName = new ComponentName(ApplicationLoader.applicationContext.getPackageName(), LaunchActivity.class.getName());
                             intent.setComponent(componentName);
-                            intent.putExtra(android.provider.Browser.EXTRA_APPLICATION_ID, ApplicationLoader.applicationContext.getPackageName());
+                            intent.putExtra(android.provider
+                                    .Browser.EXTRA_APPLICATION_ID, ApplicationLoader.applicationContext.getPackageName());
                             ApplicationLoader.applicationContext.startActivity(intent);
                         } catch (Exception e) {
                             FileLog.e(e);
