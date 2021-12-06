@@ -53,22 +53,29 @@ public class ReactionsMenuView extends FrameLayout {
     Drawable manyMenuDrawable;
 //    Drawable bubbleDrawable;
 
+    private int getThemedColor(String key) {
+        Integer color = themeDelegate != null ? themeDelegate.getColor(key) : null;
+        return color != null ? color : Theme.getColor(key);
+    }
+
     public ReactionsMenuView(ArrayList<TLRPC.TL_availableReaction> reactions, @NonNull Context context, ChatActivity.ThemeDelegate themeDelegate, MessagesController messagesController, OnClickListener onClickListener) {
         super(context);
+        this.themeDelegate = themeDelegate;
+
 //        menuDrawable = ContextCompat.getDrawable(getContext(), R.drawable.reactions_menu).mutate(); // TODO 02/12/2021 Fuji team, RIDER-: check theme
+        final int themedColor = getThemedColor(Theme.key_actionBarDefaultSubmenuBackground);
         singleMenuDrawable = ContextCompat.getDrawable(getContext(), R.drawable.single_react_menu).mutate(); // TODO 02/12/2021 Fuji team, RIDER-: check theme
 //                Drawable shadowDrawable2 = ContextCompat.getDrawable(contentView.getContext(), R.drawable.reactions_popup_menu_new).mutate();
-        singleMenuDrawable.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground), PorterDuff.Mode.MULTIPLY));
+        singleMenuDrawable.setColorFilter(new PorterDuffColorFilter(themedColor, PorterDuff.Mode.MULTIPLY));
+
         manyMenuDrawable = ContextCompat.getDrawable(getContext(), R.drawable.many_react_menu).mutate(); // TODO 02/12/2021 Fuji team, RIDER-: check theme
 //                Drawable shadowDrawable2 = ContextCompat.getDrawable(contentView.getContext(), R.drawable.reactions_popup_menu_new).mutate();
-        manyMenuDrawable.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground), PorterDuff.Mode.MULTIPLY));
-
+        manyMenuDrawable.setColorFilter(new PorterDuffColorFilter(themedColor, PorterDuff.Mode.MULTIPLY));
 //        bubbleDrawable = ContextCompat.getDrawable(getContext(), R.drawable.react_menu_bubble).mutate(); // TODO 02/12/2021 Fuji team, RIDER-: check theme
 //                Drawable shadowDrawable2 = ContextCompat.getDrawable(contentView.getContext(), R.drawable.reactions_popup_menu_new).mutate();
 //        bubbleDrawable.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground), PorterDuff.Mode.MULTIPLY));
         this.onClickListener = onClickListener;
 //        stickersPanelArrow = new ImageView(context);
-        this.themeDelegate = themeDelegate;
 //        stickersPanelArrow.setImageResource(R.drawable.reaction_oval);
 ////        stickersPanelArrow.setColorFilter(new PorterDuffColorFilter(themeDelegate.getColor(Theme.key_chat_stickersHintPanel), PorterDuff.Mode.MULTIPLY)); // TODO 29/11/2021 Fuji team, RIDER-: check theme
 //        addView(stickersPanelArrow, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM | Gravity.RIGHT, 0, 0, 0, 0));
