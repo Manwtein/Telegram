@@ -65,6 +65,7 @@ public class ActionBarPopupWindow extends PopupWindow {
     private boolean pauseNotifications;
     private long outEmptyTime = -1;
     private boolean scaleOut;
+    private String tag;
 
     static {
         Field f = null;
@@ -87,6 +88,14 @@ public class ActionBarPopupWindow extends PopupWindow {
 
     public void setScaleOut(boolean b) {
         scaleOut = b;
+    }
+
+    public void setTag(String tag) {
+        this.tag = tag;
+    }
+
+    public String getTag() {
+        return tag;
     }
 
     public interface OnDispatchKeyEventListener {

@@ -62,9 +62,12 @@ import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.R;
 import org.telegram.messenger.SharedConfig;
 import org.telegram.messenger.Utilities;
+import org.telegram.ui.ChatActivity;
 import org.telegram.ui.Components.BackButtonMenu;
+import org.telegram.ui.Components.QuickShareContainerLayout;
 import org.telegram.ui.Components.RLottieDrawable;
 import org.telegram.ui.EmptyBaseFragment;
+import org.telegram.ui.QuickShareMenu;
 import org.telegram.ui.Stars.SuperRipple;
 import org.telegram.ui.bots.BotWebViewSheet;
 import org.telegram.ui.Components.Bulletin;
@@ -1111,6 +1114,27 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
         if (!checkTransitionAnimation() && !inActionMode && !animationInProgress) {
+            if (fragmentsStack.size() > 1 && ev != null) {
+                BaseFragment currentFragment = fragmentsStack.get(fragmentsStack.size() - 1);
+                if (currentFragment instanceof ChatActivity) {
+                    ChatActivity chatActivity = (ChatActivity) (currentFragment);
+                    ActionBarPopupWindow scrimPopupWindow = chatActivity.scrimPopupWindow;
+                    if (scrimPopupWindow != null && scrimPopupWindow.isShowing() && scrimPopupWindow.getTag() != null && scrimPopupWindow.getTag().equals(QuickShareMenu.QUICK_SHARE_TAG)) {
+                        View contentView = scrimPopupWindow.getContentView().findViewWithTag(QuickShareMenu.QUICK_SHARE_TAG);
+                        if (contentView instanceof QuickShareContainerLayout) {
+                            QuickShareContainerLayout shareContainerLayout = (QuickShareContainerLayout) contentView;
+                            if (!shareContainerLayout.terminalEventHappened) {
+                                RectF menuBackgroundRect = shareContainerLayout.relativeBackgroundRect;
+                                    ev.setLocation(
+                                            ev.getX() - menuBackgroundRect.left,
+                                            ev.getY() - menuBackgroundRect.top
+                                    );
+                                    return contentView.onTouchEvent(ev);
+                            }
+                        }
+                    }
+                }
+            }
             if (fragmentsStack.size() > 1 && allowSwipe()) {
                 if (ev != null && ev.getAction() == MotionEvent.ACTION_DOWN) {
                     BaseFragment currentFragment = fragmentsStack.get(fragmentsStack.size() - 1);

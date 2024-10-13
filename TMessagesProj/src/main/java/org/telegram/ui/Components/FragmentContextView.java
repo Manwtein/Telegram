@@ -155,6 +155,7 @@ public class FragmentContextView extends FrameLayout implements NotificationCent
     private TextPaint gradientTextPaint;
     private StaticLayout timeLayout;
     private RectF rect = new RectF();
+    private int previousGradientButtonWidth = 0;
     private boolean scheduleRunnableScheduled;
     private final Runnable updateScheduleTimeRunnable = new Runnable() {
         @Override
@@ -172,10 +173,15 @@ public class FragmentContextView extends FrameLayout implements NotificationCent
             int currentTime = fragment.getConnectionsManager().getCurrentTime();
             int diff = call.call.schedule_date - currentTime;
             String str;
-            if (diff >= 24 * 60 * 60) {
-                str = LocaleController.formatPluralString("Days", Math.round(diff / (24 * 60 * 60.0f)));
+            TLRPC.Chat currentChat = chatActivity.getCurrentChat();
+            if (!call.call.schedule_start_subscribed && (currentChat == null || !ChatObject.canManageCalls(currentChat))) {
+                str = LocaleController.getString(R.string.NotifyMe);
             } else {
-                str = AndroidUtilities.formatFullDuration(call.call.schedule_date - currentTime);
+                if (diff >= 24 * 60 * 60) {
+                    str = LocaleController.formatPluralString("Days", Math.round(diff / (24 * 60 * 60.0f)));
+                } else {
+                    str = AndroidUtilities.formatFullDuration(call.call.schedule_date - currentTime);
+                }
             }
             int width = (int) Math.ceil(gradientTextPaint.measureText(str));
             timeLayout = new StaticLayout(str, gradientTextPaint, width, Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
@@ -292,15 +298,52 @@ public class FragmentContextView extends FrameLayout implements NotificationCent
                 }
             }
 
+            final int animDuration = 200;
+            long startTime = -1;
+            long lastTime = 0;
+
             @Override
             protected void dispatchDraw(Canvas canvas) {
                 super.dispatchDraw(canvas);
                 if (currentStyle == STYLE_INACTIVE_GROUP_CALL && timeLayout != null) {
-                    int width = (int) Math.ceil(timeLayout.getLineWidth(0)) + AndroidUtilities.dp(24);
-                    if (width != gradientWidth) {
-                        linearGradient = new LinearGradient(0, 0, width * 1.7f, 0, new int[]{0xff648CF4, 0xff8C69CF, 0xffD45979, 0xffD45979}, new float[]{0.0f, 0.294f, 0.588f, 1.0f}, Shader.TileMode.CLAMP);
+                    int targetWidth = (int) Math.ceil(timeLayout.getLineWidth(0)) + AndroidUtilities.dp(24);
+                    int width = targetWidth;
+                    float alphaProgress = 1f;
+                    if (fragment != null) {
+                        long newTime = fragment.getConnectionsManager().getCurrentTimeMillis();
+                        if (previousGradientButtonWidth != 0 && previousGradientButtonWidth != width && startTime == -1) {
+                            if (newTime - lastTime > animDuration * 0.3) {
+                                startTime = newTime;
+                            } else {
+                                startTime = lastTime;
+                            }
+                        }
+                        if (startTime != -1) {
+                            int diff = previousGradientButtonWidth - width;
+                            float fraction = (float) diff / animDuration;
+                            long diffTime = newTime - startTime;
+                            float addWidth = diffTime * fraction;
+                            if (diffTime >= animDuration) { // do reset
+                                previousGradientButtonWidth = width;
+                                startTime = -1;
+                            } else {
+                                width = width + (int) (diff - addWidth); // 600 + (-300 + 270)
+                                alphaProgress = diffTime > animDuration / 2 ? (float) diffTime / animDuration : (float) (animDuration - diffTime) / animDuration;
+                                alphaProgress = alphaProgress + (1 - alphaProgress) * 0.7f;
+                                invalidate();
+                            }
+                        }
+                        lastTime = newTime;
+                    }
+                    if (startTime == -1) {
+                        previousGradientButtonWidth = width;
+                    }
+                    int x = getMeasuredWidth() - width - AndroidUtilities.dp(10);
+                    int y = AndroidUtilities.dp(10);
+                    if (targetWidth != gradientWidth) {
+                        linearGradient = new LinearGradient(x, y, x + width * 1.7f, y, new int[]{0xff648CF4, 0xff8C69CF, 0xffD45979, 0xffD45979}, new float[]{0.0f, 0.294f, 0.588f, 1.0f}, Shader.TileMode.CLAMP);
                         gradientPaint.setShader(linearGradient);
-                        gradientWidth = width;
+                        gradientWidth = targetWidth;
                     }
                     ChatObject.Call call = chatActivity.getGroupCall();
                     float moveProgress = 0.0f;
@@ -318,13 +361,13 @@ public class FragmentContextView extends FrameLayout implements NotificationCent
                     matrix.reset();
                     matrix.postTranslate(-gradientWidth * 0.7f * moveProgress, 0);
                     linearGradient.setLocalMatrix(matrix);
-                    int x = getMeasuredWidth() - width - AndroidUtilities.dp(10);
-                    int y = AndroidUtilities.dp(10);
-                    rect.set(0, 0, width, AndroidUtilities.dp(28));
                     canvas.save();
-                    canvas.translate(x, y);
+                    int newAlpha = (int) (255 * alphaProgress);
+                    gradientPaint.setAlpha(newAlpha);
+                    gradientTextPaint.setAlpha(newAlpha);
+                    rect.set(x, y, x + width, y + AndroidUtilities.dp(28));
                     canvas.drawRoundRect(rect, AndroidUtilities.dp(16), AndroidUtilities.dp(16), gradientPaint);
-                    canvas.translate(AndroidUtilities.dp(12), AndroidUtilities.dp(6));
+                    canvas.translate(x + AndroidUtilities.dp(12), y + AndroidUtilities.dp(6));
                     timeLayout.draw(canvas);
                     canvas.restore();
                 }
@@ -669,6 +712,70 @@ public class FragmentContextView extends FrameLayout implements NotificationCent
             }
         });
 
+        setOnTouchListener(
+                new OnTouchListener() {
+                    private final int r = AndroidUtilities.dp(16);
+
+                    private boolean inCorners(float x, float y) {
+                        float relativeX = x - rect.left;
+                        float relativeY = y - rect.top;
+                        float width = rect.width();
+                        float height = rect.height();
+                        return inCorner(relativeX - r, relativeY - r, r) ||
+                                inCorner(relativeX - r, height - r - relativeY, r) ||
+                                inCorner(width - r - relativeX, height - r - relativeY, r) ||
+                                inCorner(width - r - relativeX, relativeY - r, r);
+                    }
+
+                    private boolean inCorner(float dx, float dy, float r) {
+                        return dx < 0 && dy < 0 && (dx * dx + dy * dy) > r * r;
+                    }
+
+                    @Override
+                    public boolean onTouch(View v, MotionEvent event) {
+                        if (fragment.getParentActivity() == null) {
+                            return false;
+                        }
+                        ChatObject.Call call = chatActivity.getGroupCall();
+                        if (call == null || call.call.schedule_start_subscribed) {
+                            return false;
+                        }
+                        if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_DOWN) {
+                            if (rect.contains(event.getX(), event.getY()) && !inCorners(event.getX(), event.getY())) {
+                                if (event.getAction() == MotionEvent.ACTION_UP) {
+                                    int currentAccount;
+                                    if (chatActivity != null) {
+                                        currentAccount = fragment.getCurrentAccount();
+                                    } else {
+                                        currentAccount = account;
+                                    }
+                                    TLRPC.TL_phone_toggleGroupCallStartSubscription req = new TLRPC.TL_phone_toggleGroupCallStartSubscription();
+                                    req.call = call.getInputGroupCall();
+                                    call.call.schedule_start_subscribed = !call.call.schedule_start_subscribed;
+                                    req.subscribed = call.call.schedule_start_subscribed;
+                                    AccountInstance accountInstance = AccountInstance.getInstance(currentAccount);
+                                    accountInstance.getConnectionsManager().sendRequest(req, (response, error) -> {
+                                        if (response != null) {
+                                            accountInstance.getMessagesController().processUpdates((TLRPC.Updates) response, false);
+                                        }
+                                    });
+                                    BulletinFactory.of(fragment).createSimpleBulletin(R.raw.ic_stream_notification, LocaleController.getString(R.string.NotifyMessage)).show();
+                                    AndroidUtilities.cancelRunOnUIThread(updateScheduleTimeRunnable);
+                                    scheduleRunnableScheduled = true;
+                                    updateScheduleTimeRunnable.run();
+                                }
+                                return true;
+                            } else {
+                                if (event.getAction() == MotionEvent.ACTION_UP) {
+                                    v.callOnClick();
+                                }
+                                return false;
+                            }
+                        }
+                        return false;
+                    }
+                }
+        );
         setOnClickListener(v -> {
             if (currentStyle == STYLE_AUDIO_PLAYER) {
                 MessageObject messageObject = MediaController.getInstance().getPlayingMessageObject();
@@ -1377,6 +1484,13 @@ public class FragmentContextView extends FrameLayout implements NotificationCent
                             muteButton.dispatchTouchEvent(e);
                         }
                     }
+                }
+            } else if (currentStyle == STYLE_INACTIVE_GROUP_CALL) {
+                if (id == NotificationCenter.groupCallVisibilityChanged) {
+                    previousGradientButtonWidth = 0;
+                    AndroidUtilities.cancelRunOnUIThread(updateScheduleTimeRunnable);
+                    scheduleRunnableScheduled = true;
+                    updateScheduleTimeRunnable.run();
                 }
             }
         } else if (id == NotificationCenter.groupCallTypingsUpdated) {

@@ -9147,6 +9147,10 @@ public class Theme {
         applyServiceShaderMatrix(serviceBitmap, serviceBitmapShader, serviceBitmapMatrix, w, h, translationX, translationY);
     }
 
+    public static void applyServiceShaderMatrix(BitmapShader shader, Matrix matrix, int w, int h, float translationX, float translationY) {
+        applyServiceShaderMatrix(serviceBitmap, shader, matrix, w, h, translationX, translationY);
+    }
+
     public static void applyServiceShaderMatrix(Bitmap bitmap, BitmapShader shader, Matrix matrix, int w, int h, float translationX, float translationY) {
         if (shader == null || matrix == null) {
             return;

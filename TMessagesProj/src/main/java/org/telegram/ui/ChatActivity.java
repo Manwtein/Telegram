@@ -8,6 +8,7 @@
 
 package org.telegram.ui;
 
+import android.widget.PopupWindow;
 import static org.telegram.messenger.AndroidUtilities.dp;
 import static org.telegram.messenger.LocaleController.getString;
 
@@ -222,7 +223,6 @@ import org.telegram.ui.Cells.MentionCell;
 import org.telegram.ui.Cells.ProfileChannelCell;
 import org.telegram.ui.Cells.ShareDialogCell;
 import org.telegram.ui.Cells.StickerCell;
-import org.telegram.ui.Cells.TextCell;
 import org.telegram.ui.Cells.TextSelectionHelper;
 import org.telegram.ui.Components.*;
 import org.telegram.ui.Components.FloatingDebug.FloatingDebugController;
@@ -235,6 +235,9 @@ import org.telegram.ui.Components.Premium.PremiumPreviewBottomSheet;
 import org.telegram.ui.Components.Premium.boosts.BoostDialogs;
 import org.telegram.ui.Components.Premium.boosts.GiftInfoBottomSheet;
 import org.telegram.ui.Components.Premium.boosts.PremiumPreviewGiftLinkBottomSheet;
+import org.telegram.ui.Components.QuickShare.QuickShareBtnAttributes;
+import org.telegram.ui.Components.QuickShare.QuickShareEffectOverlay;
+import org.telegram.ui.Components.QuickShare.QuickShareOpenEffectOverlay;
 import org.telegram.ui.Components.Reactions.ChatSelectionReactionMenuOverlay;
 import org.telegram.ui.Components.Reactions.ReactionsEffectOverlay;
 import org.telegram.ui.Components.Reactions.ReactionsLayoutInBubble;
@@ -407,6 +410,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
     private HintView2 savedMessagesTagHint;
     private HintView2 groupEmojiPackHint;
     private HintView2 botMessageHint;
+    private HintView2 botStartButtonHint;
     private HintView2 factCheckHint;
 
     private int reactionsMentionCount;
@@ -1461,7 +1465,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
     private final static int share_business_link = 66;
     private final static int rename_business_link = 67;
     private final static int delete_business_link = 68;
-    
+
     private final static int share = 69;
 
     private final static int id_chat_compose_panel = 1000;
@@ -7926,6 +7930,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
         if (currentUser != null && currentUser.bot && !UserObject.isReplyUser(currentUser) && !isInScheduleMode() && chatMode != MODE_PINNED && chatMode != MODE_SAVED) {
             bottomOverlayStartButton.setVisibility(View.VISIBLE);
             bottomOverlayChat.setVisibility(View.VISIBLE);
+            showBotStartButtonHint();
         }
 
         bottomOverlayLinksText = new LinkSpanDrawable.LinksTextView(context, themeDelegate);
@@ -8439,6 +8444,43 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
         return fragmentView;
     }
 
+    private void showBotStartButtonHint() {
+        if (botStartButtonHint != null || bottomOverlayChat == null) {
+            return;
+        }
+        botStartButtonHint = new HintView2(getContext(), HintView2.DIRECTION_BOTTOM)
+                .setMultilineText(true)
+                .setTextAlign(Layout.Alignment.ALIGN_NORMAL)
+                .setDuration(5000L)
+                .setHideByTouch(true)
+                .useScale(true)
+                .setIcon(new AnimatedDoubleArrowDrawable(0xffffffff))
+                .setRounding(8)
+                .setJoint(0.5f, 0)
+                .setText(LocaleController.getString(R.string.BotStartButtonHintMessage));
+        botStartButtonHint.setOnHiddenListener(() -> {
+            contentView.removeView(botStartButtonHint);
+            botStartButtonHint = null;
+        });
+        botStartButtonHint.setTag("botStartButtonHint");
+        Paint paint = botStartButtonHint.getTextPaint();
+        final int width = (int) Math.ceil(paint.measureText(botStartButtonHint.getText().toString())) + AndroidUtilities.dp(16);
+        final int height = (int) Math.ceil(paint.getFontMetrics().descent - paint.getFontMetrics().ascent) + AndroidUtilities.dp(8);
+        contentView.addView(botStartButtonHint, LayoutHelper.createFrame(width, height, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL, 16, 0, 16, 0));
+        contentView.postDelayed(() -> {
+            if (botStartButtonHint == null) {
+                return;
+            }
+            if (messages.isEmpty() && bottomOverlayChat != null) {
+                botStartButtonHint.setTranslationY(-bottomOverlayChat.getHeight() - AndroidUtilities.dp(8));
+                botStartButtonHint.show();
+            } else {
+                contentView.removeView(botStartButtonHint);
+                botStartButtonHint = null;
+            }
+        }, 400L);
+    }
+
     private void checkBotMessageHint() {
         if (botMessageHint != null) {
             return;
@@ -8502,7 +8544,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             botMessageHint.show();
         });
     }
-    
+
     private void hideHints() {
         if (savedMessagesTagHint != null && savedMessagesTagHint.shown()) {
             savedMessagesTagHint.hide();
@@ -9788,7 +9830,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 scrimViewAlphaAnimator.cancel();
             }
             animators.add(scrimPaintAlphaAnimator = ValueAnimator.ofFloat(0, value));
-            
+
             if (blur) {
                 AndroidUtilities.makeGlobalBlurBitmap(bitmap -> {
                     scrimBlurBitmap = bitmap;
@@ -25160,6 +25202,9 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                     sentBotStart = true;
                 }
             } else {
+                if (botStartButtonHint != null && botStartButtonHint.shown()) {
+                    botStartButtonHint.hide(true);
+                }
                 bottomOverlayChatText.setText(LocaleController.getString(R.string.DeleteThisChat));
             }
         }
@@ -36170,6 +36215,87 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
         }
 
         @Override
+        public void didLongPressShareButton(ChatMessageCell cell, float touchX, QuickShareBtnAttributes shareBtnAttributes) {
+            if (themeDelegate == null || chatListView == null || actionBar == null || contentView == null) {
+                return;
+            }
+            if (themeDelegate.serviceBitmapSource != null) {
+                shareBtnAttributes.shaderBitmap = themeDelegate.serviceBitmapSource;
+            }
+            shareBtnAttributes.shaderOffset = (isKeyboardVisible() ? chatListView.getTop() : actionBar.getMeasuredHeight()) - contentView.getBackgroundTranslationY() - (1f - contentPanTranslationT) * chatListViewPaddingTop;
+            chatListView.stopScroll();
+            chatLayoutManager.setCanScrollVertically(false);
+            int[] location = new int[2];
+            cell.getLocationInWindow(location);
+            final float shareButtonTopY = location[1] + shareBtnAttributes.rectF.top;
+            MessageObject messageObject = cell.getMessageObject();
+            ArrayList<MessageObject> arrayList = null;
+            if (messageObject.getGroupId() != 0) {
+                MessageObject.GroupedMessages groupedMessages = groupedMessagesMap.get(messageObject.getGroupId());
+                if (groupedMessages != null) {
+                    arrayList = groupedMessages.messages;
+                }
+            }
+            if (arrayList == null) {
+                arrayList = new ArrayList<>();
+                arrayList.add(messageObject);
+            }
+            if (chatListView == null) {
+                return;
+            }
+            shareBtnAttributes.maxParentY = (int)(chatListView.getTop() + chatListViewPaddingTop - AndroidUtilities.dp(4));
+            scrimPopupWindow = QuickShareMenu.show(
+                    0,
+                    getParentLayout(),
+                    contentView,
+                    cell,
+                    touchX,
+                    shareButtonTopY,
+                    getResourceProvider(),
+                    arrayList,
+                    ChatActivity.this,
+                    shareBtnAttributes,
+                    new QuickShareContainerLayout.QuickShareContainerListener() {
+                        @Override
+                        public void onClickOutside() {
+                            if (scrimPopupWindow != null) {
+                                scrimPopupWindow.dismiss();
+                            }
+                        }
+
+                        @Override
+                        public void onSend(TLRPC.Dialog did, TLRPC.TL_forumTopic topic, View fromView) {
+                            createUndoView();
+                            if (undoView == null) {
+                                return;
+                            }
+                            if (did.id != getUserConfig().getClientUserId() || !BulletinFactory.of(ChatActivity.this).showForwardedBulletinWithTag(did.id, 1)) {
+                                undoView.showWithAction(did.id, UndoView.ACTION_FWD_MESSAGES, 1, topic, null, null, true);
+                                // TODO: 21.10.2024 show undo button in some cases?
+                            }
+                            if (scrimPopupWindow != null) {
+                                float x = 0;
+                                float y = 0;
+                                QuickShareEffectOverlay.removeCurrent(false);
+                                QuickShareEffectOverlay.show(ChatActivity.this, undoView.leftImageView, fromView, x, y, currentAccount, ReactionsEffectOverlay.ONLY_MOVE_ANIMATION, did.id);
+                                QuickShareEffectOverlay.startAnimation();
+                                if (scrimPopupWindow != null) {
+                                    scrimPopupWindow.dismiss();
+                                }
+                            }
+                        }
+                    });
+            scrimPopupWindow.setOnDismissListener(new PopupWindow.OnDismissListener() {
+                @Override
+                public void onDismiss() {
+                    QuickShareOpenEffectOverlay.dismissAll();
+                    scrimPopupWindow = null;
+                    chatLayoutManager.setCanScrollVertically(true);
+                }
+            });
+        }
+
+        @Override
         public boolean canPerformActions() {
             return actionBar != null && !actionBar.isActionModeShowed() && reportType < 0 && !inPreviewMode;
         }
@@ -39336,7 +39462,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             clip[1] = chatListView.getMeasuredHeight() - (chatListView.getPaddingBottom() - AndroidUtilities.dp(3));
         }
     }
-    
+
     private void updateVisibleWallpaperActions() {
         if (chatListView != null && chatAdapter != null) {
             for (int i = 0; i < chatListView.getChildCount(); ++i) {

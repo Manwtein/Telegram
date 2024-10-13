@@ -7392,6 +7392,7 @@
     <string name="ChartInUSD">%s in USD</string>
     <string name="BotAllowBiometryTitle">Allow biometry</string>
     <string name="BotAllowBiometryMessage">Do you want to allow **%s** to use biometry?</string>
+    <string name="BotStartButtonHintMessage">Tap here to use this bot</string>
     <string name="DownloadSpeedLimited">Download speed limited</string>
     <string name="DownloadSpeedLimitedMessage">Subscribe to **Telegram Premium** and increase download speeds %d times.</string>
     <string name="UploadSpeedLimited">Upload speed limited</string>
@@ -7523,6 +7524,8 @@
     <string name="NotificationReactionsMessages">Messages</string>
     <string name="NotificationReactionsStories">Stories</string>
     <string name="NotifyMeAbout">Notify me about…</string>
+    <string name="NotifyMe">Notify me</string>
+    <string name="NotifyMessage">You will be notified when the live stream starts.</string>
     <string name="NotifyMeAboutPrivate">New Messages in Private Chats</string>
     <string name="NotifyMeAboutNewStories">New Stories</string>
     <string name="NotifyMeAboutImportantStories">Important Stories</string>

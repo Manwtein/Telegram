@@ -160,6 +160,7 @@ import org.telegram.ui.Components.Point;
 import org.telegram.ui.Components.Premium.boosts.BoostCounterSpan;
 import org.telegram.ui.Components.Premium.boosts.cells.msg.GiveawayMessageCell;
 import org.telegram.ui.Components.Premium.boosts.cells.msg.GiveawayResultsMessageCell;
+import org.telegram.ui.Components.QuickShare.QuickShareBtnAttributes;
 import org.telegram.ui.Components.QuoteHighlight;
 import org.telegram.ui.Components.QuoteSpan;
 import org.telegram.ui.Components.RLottieDrawable;
@@ -503,6 +504,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         }
 
         default void didPressCancelSendButton(ChatMessageCell cell) {
+        }
+
+        default void didLongPressShareButton(ChatMessageCell cell, float touchX, QuickShareBtnAttributes shareBtnAttributes) {
         }
 
         default void didLongPress(ChatMessageCell cell, float x, float y) {
@@ -863,6 +867,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     private boolean highlightedQuote;
 
     private boolean inLayout;
+    private QuickShareBtnAttributes shareBtnAttributes = new QuickShareBtnAttributes();
 
     private int currentMapProvider;
 
@@ -10026,8 +10031,6 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         }
 
         linkPreviewPressed = false;
-        sideButtonPressed = false;
-        pressedSideButton = 0;
         imagePressed = false;
         timePressed = false;
         gamePreviewPressed = false;
@@ -10061,7 +10064,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         if (delegate != null) {
             boolean handled = false;
 
-            if (avatarPressed) {
+            if (sideButtonPressed && pressedSideButton == 1) {
+                delegate.didLongPressShareButton(this, lastTouchX, shareBtnAttributes);
+                handled = true;
+            } else if (avatarPressed) {
                 if (currentUser != null) {
                     if (currentUser.id != 0) {
                         handled = delegate.didLongPressUserAvatar(this, currentUser, lastTouchX, lastTouchY);
@@ -10084,6 +10090,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             if (!handled) {
                 delegate.didLongPress(this, lastTouchX, lastTouchY);
             }
+            sideButtonPressed = false;
+            pressedSideButton = 0;
         }
         return true;
     }
@@ -18364,7 +18372,12 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                         canvas.drawPath(sideButtonPath2, getThemedPaint(Theme.key_paint_chatActionBackgroundSelected));
                     }
                 } else {
-                    canvas.drawRoundRect(rect, AndroidUtilities.dp(16), AndroidUtilities.dp(16), getThemedPaint(sideButtonPressed ? Theme.key_paint_chatActionBackgroundSelected : Theme.key_paint_chatActionBackground));
+                    if (!shareBtnAttributes.drawDisabled) {
+                        canvas.drawRoundRect(rect, AndroidUtilities.dp(16), AndroidUtilities.dp(16), getThemedPaint(sideButtonPressed ? Theme.key_paint_chatActionBackgroundSelected : Theme.key_paint_chatActionBackground));
+                        shareBtnAttributes.rectF.set(rect);
+                        shareBtnAttributes.radius = AndroidUtilities.dp(16);
+                        shareBtnAttributes.paint.set(getThemedPaint(Theme.key_paint_chatActionBackground));
+                    }
                 }
                 if (hasGradientService()) {
                     canvas.drawRoundRect(rect, AndroidUtilities.dp(16), AndroidUtilities.dp(16), Theme.chat_actionBackgroundGradientDarkenPaint);
@@ -18399,7 +18412,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     final int shw = drawable.getIntrinsicWidth() / 2, shh = drawable.getIntrinsicHeight() / 2;
                     drawable.setBounds(scx - shw, scy - shh, scx + shw, scy + shh);
                     setDrawableBounds(drawable, sideStartX + AndroidUtilities.dp(4), sideStartY + AndroidUtilities.dp(4));
-                    drawable.draw(canvas);
+                    if (!shareBtnAttributes.drawDisabled) {
+                        drawable.draw(canvas);
+                        shareBtnAttributes.icon = drawable;
+                    }
                 }
             }
         }

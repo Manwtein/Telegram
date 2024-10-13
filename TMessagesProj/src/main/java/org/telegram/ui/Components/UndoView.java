@@ -69,7 +69,7 @@ public class UndoView extends FrameLayout {
     private TextView subinfoTextView;
     private TextView undoTextView;
     private ImageView undoImageView;
-    private RLottieImageView leftImageView;
+    public RLottieImageView leftImageView;
     private BackupImageView avatarImageView;
     private LinearLayout undoButton;
     private int undoViewHeight;
@@ -99,7 +99,7 @@ public class UndoView extends FrameLayout {
 
     private float additionalTranslationY;
 
-    private boolean isShown;
+    public boolean isShown;
 
     private boolean fromTop;
 
@@ -447,6 +447,10 @@ public class UndoView extends FrameLayout {
         showWithAction(did, action, infoObject, null, actionRunnable, cancelRunnable);
     }
 
+    public void showWithAction(long did, int action, Object infoObject, Object infoObject2, Runnable actionRunnable, Runnable cancelRunnable, Boolean delayLeftImageViewAnimation) {
+        this.delayLeftImageViewAnimation = delayLeftImageViewAnimation;
+        showWithAction(did, action, infoObject, infoObject2, actionRunnable, cancelRunnable);
+    }
     public void showWithAction(long did, int action, Object infoObject, Object infoObject2, Runnable actionRunnable, Runnable cancelRunnable) {
         ArrayList<Long> ids = new ArrayList<>();
         ids.add(did);
@@ -1532,6 +1536,10 @@ public class UndoView extends FrameLayout {
             }
         }
 
+        if (delayLeftImageViewAnimation) {
+            leftImageView.stopAnimation();
+        }
+
         if (getVisibility() != VISIBLE) {
             setVisibility(VISIBLE);
             setEnterOffset((fromTop ? -1.0f : 1.0f) * (enterOffsetMargin + undoViewHeight));
@@ -1539,7 +1547,26 @@ public class UndoView extends FrameLayout {
             animatorSet.playTogether(ObjectAnimator.ofFloat(this, "enterOffset", (fromTop ? -1.0f : 1.0f) * (enterOffsetMargin + undoViewHeight), (fromTop ? 1.0f : -1.0f)));
             animatorSet.setInterpolator(new DecelerateInterpolator());
             animatorSet.setDuration(180);
+            animatorSet.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    if (delayLeftImageViewAnimation) {
+                        delayLeftImageViewAnimation = false;
+                        if (leftImageView.getAnimatedDrawable() != null && leftImageView.getVisibility() == View.VISIBLE && !leftImageView.isPlaying()) {
+                            leftImageView.playAnimation();
+                        }
+                    }
+                    super.onAnimationEnd(animation);
+                }
+            });
             animatorSet.start();
+        } else  {
+            if (delayLeftImageViewAnimation) {
+                delayLeftImageViewAnimation = false;
+                if (leftImageView.getAnimatedDrawable() != null && leftImageView.getVisibility() == View.VISIBLE && !leftImageView.isPlaying()) {
+                    leftImageView.playAnimation();
+                }
+            }
         }
     }
 
@@ -1564,6 +1591,8 @@ public class UndoView extends FrameLayout {
     int textWidthOut;
 
     float timeReplaceProgress = 1f;
+
+    boolean delayLeftImageViewAnimation = false;
 
     @Override
     protected void dispatchDraw(Canvas canvas) {

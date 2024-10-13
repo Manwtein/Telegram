@@ -7,7 +7,6 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
@@ -34,7 +33,6 @@ import androidx.core.graphics.ColorUtils;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
-import org.telegram.messenger.DialogObject;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessagesController;
@@ -49,7 +47,6 @@ import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.BottomSheet;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.DialogCell;
-import org.telegram.ui.ManageLinksActivity;
 
 import java.util.ArrayList;
 
@@ -58,7 +55,7 @@ public class LinkActionView extends LinearLayout {
     TextView linkView;
     String link;
     BaseFragment fragment;
-    ImageView optionsView;
+    ImageView endActionView;
     private final TextView copyView;
     private final TextView shareView;
     private final TextView removeView;
@@ -95,11 +92,10 @@ public class LinkActionView extends LinearLayout {
 
         int containerPadding = 4;
         frameLayout.addView(linkView);
-        optionsView = new ImageView(context);
-        optionsView.setImageDrawable(ContextCompat.getDrawable(context, R.drawable.ic_ab_other));
-        optionsView.setContentDescription(LocaleController.getString(R.string.AccDescrMoreOptions));
-        optionsView.setScaleType(ImageView.ScaleType.CENTER);
-        frameLayout.addView(optionsView, LayoutHelper.createFrame(40, 48, Gravity.RIGHT | Gravity.CENTER_VERTICAL));
+        endActionView = new ImageView(context);
+        updateEndActionImage();
+        endActionView.setScaleType(ImageView.ScaleType.CENTER);
+        frameLayout.addView(endActionView, LayoutHelper.createFrame(40, 48, Gravity.RIGHT | Gravity.CENTER_VERTICAL));
         addView(frameLayout, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, containerPadding, 0, containerPadding, 0));
 
         LinearLayout linearLayout = new LinearLayout(context);
@@ -218,8 +214,12 @@ public class LinkActionView extends LinearLayout {
             fragment.showDialog(builder.create());
         });
 
-        optionsView.setOnClickListener(view -> {
+        endActionView.setOnClickListener(view -> {
             if (actionBarPopupWindow != null) {
+                return;
+            }
+            if (hasOnlyQrAction()) {
+                showQrCode();
                 return;
             }
             ActionBarPopupWindow.ActionBarPopupWindowLayout layout = new ActionBarPopupWindow.ActionBarPopupWindowLayout(context);
@@ -352,6 +352,20 @@ public class LinkActionView extends LinearLayout {
         updateColors();
     }
 
+    private void updateEndActionImage() {
+        if (hasOnlyQrAction()) {
+            endActionView.setImageDrawable(ContextCompat.getDrawable(endActionView.getContext(), R.drawable.msg_qrcode));
+            endActionView.setContentDescription(LocaleController.getString(R.string.GetQRCode));
+        } else {
+            endActionView.setImageDrawable(ContextCompat.getDrawable(endActionView.getContext(), R.drawable.ic_ab_other));
+            endActionView.setContentDescription(LocaleController.getString(R.string.AccDescrMoreOptions));
+        }
+    }
+
+    public boolean hasOnlyQrAction() {
+        return (permanent || !canEdit) && hideRevokeOption;
+    }
+
     public void showBulletin(int resId, CharSequence str) {
         Bulletin b = BulletinFactory.of(fragment).createSimpleBulletin(resId, str);
         b.hideAfterBottomSheet = false;
@@ -383,6 +397,7 @@ public class LinkActionView extends LinearLayout {
     }
 
     private String qrText;
+
     public void setQrText(String text) {
         qrText = text;
     }
@@ -411,7 +426,7 @@ public class LinkActionView extends LinearLayout {
         removeView.setBackground(Theme.createSimpleSelectorRoundRectDrawable(AndroidUtilities.dp(8), Theme.getColor(Theme.key_chat_attachAudioBackground), ColorUtils.setAlphaComponent(Theme.getColor(Theme.key_windowBackgroundWhite), 120)));
         frameLayout.setBackground(Theme.createSimpleSelectorRoundRectDrawable(AndroidUtilities.dp(8), Theme.getColor(Theme.key_graySection), ColorUtils.setAlphaComponent(Theme.getColor(Theme.key_listSelector), (int) (255 * 0.3f))));
         linkView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-        optionsView.setColorFilter(Theme.getColor(Theme.key_dialogTextGray3));
+        endActionView.setColorFilter(Theme.getColor(Theme.key_dialogTextGray3));
         //optionsView.setBackground(Theme.createSelectorDrawable(Theme.getColor(Theme.key_listSelector), 1));
         avatarsContainer.countTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlueText));
         avatarsContainer.setBackground(Theme.createSimpleSelectorRoundRectDrawable(AndroidUtilities.dp(6), 0, ColorUtils.setAlphaComponent(Theme.getColor(Theme.key_windowBackgroundWhiteBlueText), (int) (255 * 0.3f))));
@@ -436,12 +451,12 @@ public class LinkActionView extends LinearLayout {
     public void setRevoke(boolean revoked) {
         this.revoked = revoked;
         if (revoked) {
-            optionsView.setVisibility(View.GONE);
+            endActionView.setVisibility(View.GONE);
             shareView.setVisibility(View.GONE);
             copyView.setVisibility(View.GONE);
             removeView.setVisibility(View.VISIBLE);
         } else {
-            optionsView.setVisibility(View.VISIBLE);
+            endActionView.setVisibility(View.VISIBLE);
             shareView.setVisibility(View.VISIBLE);
             copyView.setVisibility(View.VISIBLE);
             removeView.setVisibility(View.GONE);
@@ -449,19 +464,19 @@ public class LinkActionView extends LinearLayout {
     }
 
     public void showOptions(boolean b) {
-        optionsView.setVisibility(b ? View.VISIBLE : View.GONE);
+        endActionView.setVisibility(b ? View.VISIBLE : View.GONE);
     }
 
     public void hideRevokeOption(boolean b) {
         if (hideRevokeOption != b) {
             hideRevokeOption = b;
-            optionsView.setVisibility(View.VISIBLE);
-            optionsView.setImageDrawable(ContextCompat.getDrawable(optionsView.getContext(), R.drawable.ic_ab_other));
+            endActionView.setVisibility(View.VISIBLE);
+            updateEndActionImage();
         }
     }
 
     public void hideOptions() {
-        optionsView.setVisibility(View.GONE);
+        endActionView.setVisibility(View.GONE);
         linkView.setGravity(Gravity.CENTER);
         removeView.setVisibility(View.GONE);
         avatarsContainer.setVisibility(View.GONE);
