@@ -1136,7 +1136,7 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
                 }
                 lastInsets = insets;
                 v.requestLayout();
-                onInsetsChanged();
+                onInsetsChanged(lastInsets);
                 if (Build.VERSION.SDK_INT >= 30) {
                     return WindowInsets.CONSUMED;
                 } else {
@@ -1153,7 +1153,7 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
         backDrawable.setAlpha(0);
     }
 
-    protected void onInsetsChanged() {
+    protected void onInsetsChanged(WindowInsets lastInsets) {
 
     }
 

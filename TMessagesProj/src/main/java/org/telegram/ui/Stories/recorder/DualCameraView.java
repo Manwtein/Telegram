@@ -40,16 +40,32 @@ import java.util.Locale;
 public class DualCameraView extends CameraView {
 
     private boolean dualAvailable;
+    private boolean dualByDefault;
+    private boolean touchEnabled;
 
-    public DualCameraView(Context context, boolean frontface, boolean lazy) {
+    public DualCameraView(Context context, boolean frontface, boolean lazy, boolean dualByDefault, boolean touchEnabled) {
         super(context, frontface, lazy);
         dualAvailable = dualAvailableStatic(context);
+        this.dualByDefault = dualByDefault;
+        this.touchEnabled = touchEnabled;
+    }
+
+    public DualCameraView(Context context, boolean frontface, boolean lazy) {
+        this(context, frontface, lazy, true, true);
+    }
+
+    public void setTouchEnabled(boolean touchEnabled) {
+        this.touchEnabled = touchEnabled;
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        boolean r = touchEvent(event);
-        return super.onTouchEvent(event) || r;
+        if (touchEnabled) {
+            boolean r = touchEvent(event);
+            return super.onTouchEvent(event) || r;
+        } else  {
+            return false;
+        }
     }
 
     @Override
@@ -94,7 +110,7 @@ public class DualCameraView extends CameraView {
             if (isSavedDual()) {
                 enabledSavedDual = true;
                 setupDualMatrix();
-                super.dual = true;
+                super.dual = dualByDefault;
             }
             firstMeasure = false;
         }

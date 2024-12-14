@@ -28,6 +28,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.view.Window;
+import android.view.WindowInsets;
 import android.view.accessibility.AccessibilityManager;
 import android.widget.FrameLayout;
 
@@ -1023,11 +1024,12 @@ public abstract class BaseFragment {
             }
 
             @Override
-            protected void onInsetsChanged() {
+            protected void onInsetsChanged(WindowInsets lastInsets) {
                 if (actionBarLayout[0] != null) {
                     for (BaseFragment baseFragment : actionBarLayout[0].getFragmentStack()) {
                         if (baseFragment.getFragmentView() != null) {
                             baseFragment.getFragmentView().requestLayout();
+                            baseFragment.onInsetsChanged(lastInsets);
                         }
                     }
                 }
@@ -1042,6 +1044,9 @@ public abstract class BaseFragment {
         bottomSheet[0].show();
 
         return actionBarLayout;
+    }
+
+    private void onInsetsChanged(WindowInsets lastInsets) {
     }
 
     public int getThemedColor(int key) {

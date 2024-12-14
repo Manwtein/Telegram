@@ -8,6 +8,7 @@
 
 package org.telegram.ui.Components;
 
+import android.view.WindowInsets;
 import static org.telegram.messenger.AndroidUtilities.dp;
 import static org.telegram.messenger.LocaleController.formatPluralString;
 import static org.telegram.messenger.LocaleController.getString;
@@ -791,6 +792,9 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         }
 
         public void onPanTransitionEnd() {
+        }
+
+        public void onInsetsChanged(WindowInsets lastInsets) {
         }
     }
 
@@ -5617,6 +5621,14 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
             return true;
         }
         return super.onKeyDown(keyCode, event);
+    }
+
+    @Override
+    protected void onInsetsChanged(WindowInsets lastInsets) {
+        if (currentAttachLayout != null) {
+            currentAttachLayout.onInsetsChanged(lastInsets);
+        }
+        super.onInsetsChanged(lastInsets);
     }
 
     @Override

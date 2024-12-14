@@ -1,10 +1,5 @@
 package org.telegram.ui.Stories.recorder;
 
-import static org.telegram.messenger.AndroidUtilities.dp;
-import static org.telegram.messenger.AndroidUtilities.dpf2;
-import static org.telegram.messenger.AndroidUtilities.touchSlop;
-import static org.telegram.messenger.LocaleController.getString;
-
 import android.Manifest;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
@@ -24,7 +19,6 @@ import android.graphics.BitmapFactory;
 import android.graphics.BitmapShader;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Insets;
 import android.graphics.LinearGradient;
 import android.graphics.Matrix;
 import android.graphics.Outline;
@@ -57,7 +51,6 @@ import android.text.style.ClickableSpan;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.ImageSpan;
 import android.text.style.URLSpan;
-import android.util.Log;
 import android.util.Pair;
 import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
@@ -74,7 +67,6 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.graphics.ColorUtils;
@@ -82,8 +74,16 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.dynamicanimation.animation.DynamicAnimation;
 import androidx.dynamicanimation.animation.SpringAnimation;
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator;
-
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import org.telegram.messenger.AndroidUtilities;
+import static org.telegram.messenger.AndroidUtilities.dp;
+import static org.telegram.messenger.AndroidUtilities.dpf2;
+import static org.telegram.messenger.AndroidUtilities.touchSlop;
 import org.telegram.messenger.AnimationNotificationsLocker;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.BotWebViewVibrationEffect;
@@ -94,6 +94,7 @@ import org.telegram.messenger.ImageLoader;
 import org.telegram.messenger.ImageReceiver;
 import org.telegram.messenger.LiteMode;
 import org.telegram.messenger.LocaleController;
+import static org.telegram.messenger.LocaleController.getString;
 import org.telegram.messenger.MediaController;
 import org.telegram.messenger.MediaDataController;
 import org.telegram.messenger.MessageObject;
@@ -159,14 +160,7 @@ import org.telegram.ui.Stories.StoryViewer;
 import org.telegram.ui.Stories.StoryWaveEffectView;
 import org.telegram.ui.WrappedResourceProvider;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
-public class StoryRecorder implements NotificationCenter.NotificationCenterDelegate {
+public class MediaRecorder implements NotificationCenter.NotificationCenterDelegate {
 
     private final Theme.ResourcesProvider resourcesProvider = new DarkThemeResourceProvider();
 
@@ -183,19 +177,19 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
     private FlashViews flashViews;
     private ThanosEffect thanosEffect;
 
-    private static StoryRecorder instance;
+    private static MediaRecorder instance;
     private boolean wasSend;
     private long wasSendPeer = 0;
     private ClosingViewProvider closingSourceProvider;
     private Runnable closeListener;
 
-    public static StoryRecorder getInstance(Activity activity, int currentAccount) {
+    public static MediaRecorder getInstance(Activity activity, int currentAccount) {
         if (instance != null && (instance.activity != activity || instance.currentAccount != currentAccount)) {
             instance.close(false);
             instance = null;
         }
         if (instance == null) {
-            instance = new StoryRecorder(activity, currentAccount);
+            instance = new MediaRecorder(activity, currentAccount);
         }
         return instance;
     }
@@ -210,7 +204,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
     public static boolean isVisible() {
         return instance != null && instance.isShown;
     }
-    public StoryRecorder(Activity activity, int currentAccount) {
+    public MediaRecorder(Activity activity, int currentAccount) {
         this.activity = activity;
         this.currentAccount = currentAccount;
 
@@ -440,12 +434,12 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
         }
     }
 
-    public StoryRecorder whenSent(Runnable listener) {
+    public MediaRecorder whenSent(Runnable listener) {
         closeListener = listener;
         return this;
     }
 
-    public StoryRecorder closeToWhenSent(ClosingViewProvider closingSourceProvider) {
+    public MediaRecorder closeToWhenSent(ClosingViewProvider closingSourceProvider) {
         this.closingSourceProvider = closingSourceProvider;
         return this;
     }
@@ -1043,24 +1037,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
         }
     }
 
-     public abstract static class WindowViewAttrHolder extends SizeNotifierFrameLayout {
-
-         public WindowViewAttrHolder(Context context) {
-             super(context);
-         }
-
-         public WindowViewAttrHolder(Context context, INavigationLayout layout) {
-             super(context, layout);
-         }
-
-         abstract int getBottomPadding2();
-
-         abstract int getPaddingUnderContainer();
-
-         abstract void drawBlurBitmap(Bitmap bitmap, float amount);
-     }
-
-    public class WindowView extends WindowViewAttrHolder {
+    public class WindowView extends StoryRecorder.WindowViewAttrHolder {
 
         private GestureDetectorFixDoubleTap gestureDetector;
         private ScaleGestureDetector scaleGestureDetector;
@@ -6178,11 +6155,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
         }
     }
 
-    public interface Touchable {
-        boolean onTouch(MotionEvent event);
-    }
-
-    private Touchable previewTouchable;
+    private StoryRecorder.Touchable previewTouchable;
     private boolean requestedCameraPermission;
 
     private void requestCameraPermission(boolean force) {
@@ -6520,7 +6493,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
             captionEdit.hidePeriodPopup();
         }
         PremiumFeatureBottomSheet sheet = new PremiumFeatureBottomSheet(new BaseFragment() {
-            { currentAccount = StoryRecorder.this.currentAccount; }
+            { currentAccount = MediaRecorder.this.currentAccount; }
             @Override
             public Dialog showDialog(Dialog dialog) {
                 dialog.show();
@@ -6528,7 +6501,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
             }
             @Override
             public Activity getParentActivity() {
-                return StoryRecorder.this.activity;
+                return MediaRecorder.this.activity;
             }
 
             @Override
@@ -6611,7 +6584,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
         }
     }
 
-    public StoryRecorder selectedPeerId(long dialogId) {
+    public MediaRecorder selectedPeerId(long dialogId) {
         this.selectedDialogId = dialogId;
         if (captionEdit != null) {
             captionEdit.setDialogId(dialogId);
@@ -6619,7 +6592,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
         return this;
     }
 
-    public StoryRecorder canChangePeer(boolean b) {
+    public MediaRecorder canChangePeer(boolean b) {
         canChangePeer = b;
         return this;
     }
