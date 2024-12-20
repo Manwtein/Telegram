@@ -34,6 +34,7 @@ import org.telegram.ui.BubbleActivity;
 import org.telegram.ui.Components.Crop.CropRotationWheel;
 import org.telegram.ui.Components.Crop.CropTransform;
 import org.telegram.ui.Components.Crop.CropView;
+import org.telegram.ui.Stories.recorder.CollageLayoutView2;
 
 public class PhotoCropView extends FrameLayout {
 
@@ -244,12 +245,12 @@ public class PhotoCropView extends FrameLayout {
         return cropView.mirror();
     }
 
-    public void setBitmap(Bitmap bitmap, int rotation, boolean freeform, boolean update, PaintingOverlay paintingOverlay, CropTransform cropTransform, VideoEditTextureView videoView, MediaController.CropState state) {
+    public void setBitmap(Bitmap bitmap, int rotation, boolean freeform, boolean update, PaintingOverlay paintingOverlay, CropTransform cropTransform, VideoEditTextureView videoView, MediaController.CropState state, CollageLayoutView2 collageLayoutView) {
         requestLayout();
 
         thumbImageVisible = false;
         thumbImageView.setImageBitmap((Drawable) null);
-        cropView.setBitmap(bitmap, rotation, freeform, update, paintingOverlay, cropTransform, videoView, state);
+        cropView.setBitmap(bitmap, rotation, freeform, update, paintingOverlay, cropTransform, videoView, state, collageLayoutView);
         wheelView.setFreeform(freeform);
         wheelView.reset(true);
         if (state != null) {

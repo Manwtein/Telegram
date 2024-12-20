@@ -120,6 +120,7 @@ public class RecordControl extends View implements FlashViews.Invertable {
     private static final long MAX_DURATION = 60 * 1000L;
     private long recordingStart;
     private long lastDuration;
+    private long maxDuration = MAX_DURATION;
 
     private final Path checkPath = new Path();
     private final Point check1 = new Point(-dpf2(29/3.0f), dpf2(7/3.0f));
@@ -181,6 +182,11 @@ public class RecordControl extends View implements FlashViews.Invertable {
         pauseDrawable.setColorFilter(new PorterDuffColorFilter(0xffffffff, PorterDuff.Mode.MULTIPLY));
 
         updateGalleryImage();
+    }
+
+
+    public void setMaxDuration(long maxDuration) {
+        this.maxDuration = maxDuration;
     }
 
     public void updateGalleryImage() {
@@ -267,6 +273,14 @@ public class RecordControl extends View implements FlashViews.Invertable {
         redGradient.setLocalMatrix(redMatrix);
 
         setMeasuredDimension(width, height);
+    }
+
+    public float getCx() {
+        return cx;
+    }
+
+    public float getCy() {
+        return cy;
     }
 
     private static void setDrawableBounds(Drawable drawable, float cx, float cy) {
@@ -434,7 +448,7 @@ public class RecordControl extends View implements FlashViews.Invertable {
 
         long duration = System.currentTimeMillis() - recordingStart;
         float recordEndT = recording ? 0 : 1f - recordingLongT;
-        float sweepAngle = duration / (float) MAX_DURATION * 360;
+        float sweepAngle = maxDuration == -1 ? 0 : duration / (float) maxDuration * 360;
 
         float recordingLoading = this.recordingLoadingT.set(this.recordingLoading);
 
@@ -466,7 +480,7 @@ public class RecordControl extends View implements FlashViews.Invertable {
             if (duration / 1000L != lastDuration / 1000L) {
                 delegate.onVideoDuration(duration / 1000L);
             }
-            if (duration >= MAX_DURATION) {
+            if (maxDuration != -1 && duration >= maxDuration) {
                 post(() -> {
                     recording = false;
                     longpressRecording = false;

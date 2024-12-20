@@ -4253,6 +4253,18 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                 videoEditedInfo = newMsgObj.videoEditedInfo;
             } else if (videoEditedInfo != null && videoEditedInfo.notReadyYet) {
                 newMsgObj.videoEditedInfo.notReadyYet = videoEditedInfo.notReadyYet;
+            } else if (videoEditedInfo != null && newMsgObj.videoEditedInfo != null && newMsgObj.videoEditedInfo.collageParts != null && !newMsgObj.videoEditedInfo.collageParts.isEmpty()) {
+                newMsgObj.videoEditedInfo.isPhoto = videoEditedInfo.isPhoto;
+                if (videoEditedInfo.mixedSoundInfos != null) {
+                    if (newMsgObj.videoEditedInfo.mixedSoundInfos == null ) {
+                        newMsgObj.videoEditedInfo.mixedSoundInfos = videoEditedInfo.mixedSoundInfos;
+                    } else if (newMsgObj.videoEditedInfo.mixedSoundInfos.isEmpty()) {
+                        newMsgObj.videoEditedInfo.mixedSoundInfos.addAll(videoEditedInfo.mixedSoundInfos);
+                    }
+                }
+                if (videoEditedInfo.cropState != null) {
+                    newMsgObj.videoEditedInfo.cropState = videoEditedInfo.cropState;
+                }
             }
 
             if (groupId == 0) {

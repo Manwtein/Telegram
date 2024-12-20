@@ -796,6 +796,10 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
 
         public void onInsetsChanged(WindowInsets lastInsets) {
         }
+
+        public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+
+        }
     }
 
     @Nullable
@@ -838,7 +842,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
     public EditTextEmoji topCommentTextView;
     public ImageView topCommentMoveButton;
 
-    protected int avatarPicker;
+    public int avatarPicker;
     protected boolean avatarSearch;
     protected boolean typeButtonsAvailable;
 
@@ -3638,7 +3642,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
 
     @Override
     protected boolean shouldOverlayCameraViewOverNavBar() {
-        return currentAttachLayout == photoLayout && photoLayout.cameraExpanded;
+        return currentAttachLayout == photoLayout && photoLayout.cameraExpanded; // TODO: 15.12.2024  
     }
 
     @Override
@@ -3983,6 +3987,11 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
             openContactsLayout();
         } else if (requestCode == 30 && locationLayout != null && currentAttachLayout == locationLayout && isShowing()) {
             locationLayout.openShareLiveLocation();
+        }
+        for (AttachAlertLayout layout : layouts) {
+            if (layout != null) {
+                layout.onRequestPermissionsResult(requestCode, permissions, grantResults);
+            }
         }
     }
 
@@ -5094,6 +5103,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
 
     @Override
     public void onOpenAnimationEnd() {
+        sent = false;
         MediaController.AlbumEntry albumEntry;
         if (baseFragment instanceof ChatActivity) {
             albumEntry = MediaController.allMediaAlbumEntry;

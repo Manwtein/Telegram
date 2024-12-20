@@ -19,7 +19,6 @@ import android.graphics.RectF;
 import android.graphics.RenderNode;
 import android.graphics.Shader;
 import android.net.Uri;
-import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
@@ -69,6 +68,7 @@ public class CollageLayoutView2 extends FrameLayout implements ItemOptions.Scrim
     public Part currentPart;
     @Nullable
     public Part nextPart;
+    public boolean drawEnabled = true;
 
     private final Paint highlightPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path highlightPath = new Path();
@@ -77,7 +77,7 @@ public class CollageLayoutView2 extends FrameLayout implements ItemOptions.Scrim
     private final LinearGradient gradient;
     private final Matrix gradientMatrix;
 
-    private final BlurringShader.BlurManager blurManager;
+    public final BlurringShader.BlurManager blurManager;
 
     public CollageLayoutView2(Context context, BlurringShader.BlurManager blurManager, FrameLayout containerView, Theme.ResourcesProvider resourcesProvider) {
         super(context);
@@ -241,7 +241,12 @@ public class CollageLayoutView2 extends FrameLayout implements ItemOptions.Scrim
         for (int i = 0; i < getChildCount(); ++i) {
             View child = getChildAt(i);
             if (child == cameraView) {
-                child.measure(MeasureSpec.makeMeasureSpec(w, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(h, MeasureSpec.EXACTLY));
+                FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams)child.getLayoutParams();
+                if (layoutParams.width == -1 || layoutParams.height == -1) {
+                    child.measure(MeasureSpec.makeMeasureSpec(w, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(h, MeasureSpec.EXACTLY));
+                } else {
+                    child.measure(MeasureSpec.makeMeasureSpec(layoutParams.width, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(layoutParams.height, MeasureSpec.EXACTLY));
+                }
             } else {
                 Part part = null;
                 for (int j = 0; j < parts.size(); ++j) {
@@ -327,6 +332,9 @@ public class CollageLayoutView2 extends FrameLayout implements ItemOptions.Scrim
     @Override
     protected void dispatchDraw(@NonNull Canvas canvas) {
         super.dispatchDraw(canvas);
+        if (!drawEnabled) {
+            return;
+        }
         if (!hasLayout() && !reordering && !this.reorderingTouch && animatedRows.get() == currentLayout.h && animatedColumns[0].get() == currentLayout.columns[0]) {
             setCameraNeedsBlur(false);
             return;

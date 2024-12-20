@@ -7,13 +7,11 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.PointF;
 import android.graphics.RectF;
 import android.os.Build;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.ViewTreeObserver;
 import android.widget.FrameLayout;
@@ -30,15 +28,13 @@ import org.telegram.messenger.SharedConfig;
 import org.telegram.messenger.VideoEditedInfo;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.BubbleActivity;
-import org.telegram.ui.Components.Paint.Swatch;
-import org.telegram.ui.Components.Paint.Views.TextPaintView;
 import org.telegram.ui.Components.PaintingOverlay;
-import org.telegram.ui.Components.Point;
 import org.telegram.ui.Components.VideoEditTextureView;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
+import org.telegram.ui.Stories.recorder.CollageLayoutView2;
 
 public class CropView extends FrameLayout implements CropAreaView.AreaViewListener, CropGestureDetector.CropGestureListener {
     private static final float EPSILON = 0.00001f;
@@ -50,6 +46,7 @@ public class CropView extends FrameLayout implements CropAreaView.AreaViewListen
     private Matrix overlayMatrix;
     private PaintingOverlay paintingOverlay;
     private VideoEditTextureView videoEditTextureView;
+    private CollageLayoutView2 collageLayoutView;
     private CropTransform cropTransform;
 
     private RectF previousAreaRect;
@@ -309,15 +306,16 @@ public class CropView extends FrameLayout implements CropAreaView.AreaViewListen
         areaView.setActualRect(ratio);
     }
 
-    public void setBitmap(Bitmap b, int rotation, boolean fform, boolean same, PaintingOverlay overlay, CropTransform transform, VideoEditTextureView videoView, MediaController.CropState restoreState) {
+    public void setBitmap(Bitmap b, int rotation, boolean fform, boolean same, PaintingOverlay overlay, CropTransform transform, VideoEditTextureView videoView, MediaController.CropState restoreState, CollageLayoutView2 collageView) {
         freeform = fform;
         paintingOverlay = overlay;
         videoEditTextureView = videoView;
+        collageLayoutView = collageView;
         cropTransform = transform;
         bitmapRotation = rotation;
         bitmap = b;
-        areaView.setIsVideo(videoEditTextureView != null);
-        if (b == null && videoView == null) {
+        areaView.setIsVideo(videoEditTextureView != null || collageLayoutView != null);
+        if (b == null && videoView == null && collageLayoutView == null) {
             state = null;
             imageView.setImageDrawable(null);
         } else {
@@ -386,7 +384,7 @@ public class CropView extends FrameLayout implements CropAreaView.AreaViewListen
             } else {
                 state.update(w, h, rotation);
             }
-            imageView.setImageBitmap(videoView == null ? bitmap : null);
+            imageView.setImageBitmap(videoView == null && collageLayoutView == null ? bitmap : null);
         }
     }
 
@@ -407,6 +405,7 @@ public class CropView extends FrameLayout implements CropAreaView.AreaViewListen
 
     public void onHide() {
         videoEditTextureView = null;
+        collageLayoutView = null;
         paintingOverlay = null;
         isVisible = false;
     }
@@ -715,6 +714,8 @@ public class CropView extends FrameLayout implements CropAreaView.AreaViewListen
     private int getCurrentWidth() {
         if (videoEditTextureView != null) {
             return videoEditTextureView.getVideoWidth();
+        } else if (collageLayoutView != null) {
+            return collageLayoutView.getWidth();
         }
         if (bitmap == null) return 1;
         return bitmapRotation == 90 || bitmapRotation == 270 ? bitmap.getHeight() : bitmap.getWidth();
@@ -723,6 +724,8 @@ public class CropView extends FrameLayout implements CropAreaView.AreaViewListen
     private int getCurrentHeight() {
         if (videoEditTextureView != null) {
             return videoEditTextureView.getVideoHeight();
+        } else if (collageLayoutView != null) {
+            return collageLayoutView.getHeight();
         }
         if (bitmap == null) return 1;
         return bitmapRotation == 90 || bitmapRotation == 270 ? bitmap.getWidth() : bitmap.getHeight();
