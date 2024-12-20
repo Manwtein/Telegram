@@ -17158,14 +17158,15 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             parentChatActivity.getFragmentView().invalidate();
         }
 
-        if (collageLayoutView != null && collageLayoutView.isAttachedToWindow()) {
-            AndroidUtilities.removeFromParent(collageLayoutView);
-            collageLayoutView = null;
-            AndroidUtilities.removeFromParent(aspectRatioFrameLayoutCollage);
-            aspectRatioFrameLayoutCollage = null;
-            collageVideoEditedInfo = null;
-            storyEntry = null;
-        }
+//        if (collageLayoutView != null && collageLayoutView.isAttachedToWindow()) {
+//            AndroidUtilities.removeFromParent(collageLayoutView);
+//            collageLayoutView = null;
+//            AndroidUtilities.removeFromParent(aspectRatioFrameLayoutCollage);
+//            aspectRatioFrameLayoutCollage = null;
+//            collageVideoEditedInfo = null;
+//            storyEntry = null;
+//            destroyPhotoViewer();
+//        }
         parentChatActivity = null;
         removeObservers();
 
@@ -17563,8 +17564,15 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             currentThumb = null;
         }
         parentAlert = null;
-        storyEntry = null;
-        collageLayoutView = null;
+        if (collageLayoutView != null) {
+            AndroidUtilities.removeFromParent(collageLayoutView);
+            collageLayoutView = null;
+            AndroidUtilities.removeFromParent(aspectRatioFrameLayoutCollage);
+            aspectRatioFrameLayoutCollage = null;
+            collageVideoEditedInfo = null;
+            storyEntry = null;
+            destroyPhotoViewer();
+        }
         collageVideoEditedInfo = null;
         if (currentAnimation != null) {
             currentAnimation.removeSecondParentView(containerView);
